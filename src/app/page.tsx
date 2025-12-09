@@ -112,7 +112,7 @@ export default function DashboardPage() {
               value="2.845"
               icon={CheckCircle2}
               description="98,4% aprovados"
-              variant="success"
+              variant="default"
             />
             <StatCard
               title="Remessas Enviadas"
