@@ -1,63 +1,237 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { Sidebar } from '@/components/sidebar';
+import { PageHeader } from '@/components/page-header';
+import { StatCard } from '@/components/stat-card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import {
+  Database,
+  ArrowLeftRight,
+  CheckCircle2,
+  Package,
+  Send,
+  Activity,
+  TrendingUp,
+} from 'lucide-react';
+import { LabelList, Pie, PieChart } from 'recharts';
+import {
+  ChartContainer,
+  ChartConfig,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '@/components/ui/chart';
+
+const statusData = [
+  { status: 'Criada', count: 12, fill: 'var(--color-chart-1)' },
+  { status: 'Validada', count: 8, fill: 'var(--color-chart-4)' },
+  { status: 'Enviada', count: 5, fill: 'var(--color-chart-2)' },
+];
+
+const chartConfig = {
+  count: {
+    label: 'Quantidade',
+  },
+  Criada: {
+    label: 'Criada',
+    color: 'var(--chart-1)',
+  },
+  Validada: {
+    label: 'Validada',
+    color: 'var(--chart-4)',
+  },
+  Enviada: {
+    label: 'Enviada',
+    color: 'var(--chart-2)',
+  },
+} satisfies ChartConfig;
+
+const recentActions = [
+  {
+    action: 'Dados carregados',
+    module: 'Execução Orçamentária',
+    time: '2 min atrás',
+    status: 'success',
+  },
+  {
+    action: 'Remessa gerada',
+    module: 'Empenho',
+    time: '15 min atrás',
+    status: 'success',
+  },
+  {
+    action: 'Validação concluída',
+    module: 'Liquidação',
+    time: '1 hora atrás',
+    status: 'success',
+  },
+  {
+    action: 'Envio ao TCE',
+    module: 'Pagamento',
+    time: '2 horas atrás',
+    status: 'success',
+  },
+];
+
+export default function DashboardPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="flex min-h-screen">
+      <Sidebar />
+
+      <main className="ml-64 flex-1">
+        <PageHeader
+          title="Dashboard"
+          description="Visão geral da POC de integração com e-Sfinge/TCE-MS"
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+
+        <div className="space-y-6 p-8">
+          {/* Stats Cards */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              title="Dados Carregados"
+              value="3.247"
+              icon={Database}
+              description="Registros da origem"
+              variant="default"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            <StatCard
+              title="Transformações"
+              value="2.891"
+              icon={ArrowLeftRight}
+              description="Registros processados"
+              variant="default"
+            />
+            <StatCard
+              title="Validações OK"
+              value="2.845"
+              icon={CheckCircle2}
+              description="98,4% aprovados"
+              variant="success"
+            />
+            <StatCard
+              title="Remessas Enviadas"
+              value="25"
+              icon={Send}
+              description="Últimos 7 dias"
+              variant="default"
+            />
+          </div>
+
+          {/* Main Content Grid */}
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* Status Chart */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                  Status das Remessas
+                </CardTitle>
+                <CardDescription>Distribuição por status</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer
+                  config={chartConfig}
+                  className="[&_.recharts-text]:fill-background mx-auto aspect-square max-h-[250px]"
+                >
+                  <PieChart>
+                    <ChartTooltip
+                      content={
+                        <ChartTooltipContent nameKey="count" hideLabel />
+                      }
+                    />
+                    <Pie data={statusData} dataKey="count">
+                      <LabelList
+                        dataKey="status"
+                        className="fill-background"
+                        stroke="none"
+                        fontSize={12}
+                        formatter={(value: any) =>
+                          chartConfig[value as keyof typeof chartConfig]?.label
+                        }
+                      />
+                    </Pie>
+                  </PieChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+
+            {/* Recent Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5 text-primary" />
+                  Últimas Ações
+                </CardTitle>
+                <CardDescription>
+                  Atividades recentes do sistema
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {recentActions.map((item, index) => (
+                    <div
+                      key={index}
+                      className="flex items-start justify-between rounded-lg border border-border bg-secondary/50 p-3"
+                    >
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-card-foreground">
+                          {item.action}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {item.module}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="text-xs text-muted-foreground">
+                          {item.time}
+                        </span>
+                        <span className="flex h-2 w-2 rounded-full bg-success" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Acesso Rápido</CardTitle>
+              <CardDescription>Ações principais do fluxo</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-3 md:grid-cols-3">
+                <Button
+                  className="h-auto flex-col gap-2 py-4 bg-transparent"
+                  variant="outline"
+                >
+                  <Database className="h-6 w-6" />
+                  <span className="text-sm">Carregar Dados</span>
+                </Button>
+                <Button
+                  className="h-auto flex-col gap-2 py-4 bg-transparent"
+                  variant="outline"
+                >
+                  <Package className="h-6 w-6" />
+                  <span className="text-sm">Gerar Remessa</span>
+                </Button>
+                <Button
+                  className="h-auto flex-col gap-2 py-4 bg-transparent"
+                  variant="outline"
+                >
+                  <Send className="h-6 w-6" />
+                  <span className="text-sm">Enviar ao TCE</span>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </main>
     </div>
