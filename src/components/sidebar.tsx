@@ -12,6 +12,7 @@ import {
   Send,
   FileText,
 } from 'lucide-react';
+import { Logo } from './logo';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
@@ -32,11 +33,7 @@ export function Sidebar() {
         {/* Header */}
         <div className="flex h-16 items-center border-b border-sidebar-border px-6">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <span className="text-sm font-bold text-primary-foreground">
-                eS
-              </span>
-            </div>
+            <Logo size={44} />
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-sidebar-foreground">
                 Sync
