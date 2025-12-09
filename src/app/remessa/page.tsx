@@ -1,54 +1,67 @@
-"use client"
+'use client';
 
-import { Sidebar } from "@/components/sidebar"
-import { PageHeader } from "@/components/page-header"
-import { JsonViewer } from "@/components/json-viewer"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Package, Calendar, Building2, FileJson, Send } from "lucide-react"
+import { Sidebar } from '@/components/sidebar';
+import { PageHeader } from '@/components/page-header';
+import { JsonViewer } from '@/components/json-viewer';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Package, Calendar, Building2, FileJson, Send } from 'lucide-react';
 
 const remessaData = {
   cabecalho: {
-    unidadeGestora: "350001",
-    competencia: "01/2024",
-    modulo: "EXECUCAO_ORCAMENTARIA",
-    versaoLayout: "2.1.5",
-    dataGeracao: "2024-01-26T14:30:00Z",
+    unidadeGestora: '350001',
+    competencia: '01/2024',
+    modulo: 'EXECUCAO_ORCAMENTARIA',
+    versaoLayout: '2.1.5',
+    dataGeracao: '2024-01-26T14:30:00Z',
   },
   registros: [
     {
-      tipo: "EMPENHO",
-      numero: "2024/000123",
+      tipo: 'EMPENHO',
+      numero: '2024/000123',
       orgao: {
-        codigo: "01",
-        nome: "Secretaria de Saúde",
+        codigo: '01',
+        nome: 'Secretaria de Saúde',
       },
       valor: 125000.0,
-      dataEmissao: "2024-01-15T00:00:00Z",
-      situacao: "ATIVO",
+      dataEmissao: '2024-01-15T00:00:00Z',
+      situacao: 'ATIVO',
     },
     {
-      tipo: "LIQUIDACAO",
-      numero: "2024/000089",
-      empenhoReferencia: "2024/000123",
+      tipo: 'LIQUIDACAO',
+      numero: '2024/000089',
+      empenhoReferencia: '2024/000123',
       valor: 125000.0,
-      dataLiquidacao: "2024-01-20T00:00:00Z",
+      dataLiquidacao: '2024-01-20T00:00:00Z',
     },
   ],
   metadados: {
     quantidadeRegistros: 5,
     valorTotal: 895500.0,
-    hash: "a3f5b9c2d1e8f4a7b6c9d2e5f8a1b4c7",
+    hash: 'a3f5b9c2d1e8f4a7b6c9d2e5f8a1b4c7',
   },
-}
+};
 
 const versionHistory = [
-  { versao: "v3", data: "26/01/2024 14:30", registros: 5, status: "Atual" },
-  { versao: "v2", data: "26/01/2024 10:15", registros: 4, status: "Anterior" },
-  { versao: "v1", data: "25/01/2024 16:45", registros: 3, status: "Anterior" },
-]
+  { versao: 'v3', data: '26/01/2024 14:30', registros: 5, status: 'Atual' },
+  { versao: 'v2', data: '26/01/2024 10:15', registros: 4, status: 'Anterior' },
+  { versao: 'v1', data: '25/01/2024 16:45', registros: 3, status: 'Anterior' },
+];
 
 export default function RemessaPage() {
   return (
@@ -61,7 +74,7 @@ export default function RemessaPage() {
           description="Visualize o pacote final que será enviado ao TCE-MS"
           action={
             <Button className="bg-primary">
-              <Send className="mr-2 h-4 w-4" />
+              <Send className=" h-4 w-4" />
               Enviar ao TCE
             </Button>
           }
@@ -79,7 +92,9 @@ export default function RemessaPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-xl font-bold">350001</p>
-                <p className="text-xs text-muted-foreground">Prefeitura Municipal</p>
+                <p className="text-xs text-muted-foreground">
+                  Prefeitura Municipal
+                </p>
               </CardContent>
             </Card>
 
@@ -104,7 +119,9 @@ export default function RemessaPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-balance text-sm font-bold">Execução Orçamentária</p>
+                <p className="text-balance text-sm font-bold">
+                  Execução Orçamentária
+                </p>
                 <p className="text-xs text-muted-foreground">Layout v2.1.5</p>
               </CardContent>
             </Card>
@@ -129,13 +146,20 @@ export default function RemessaPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Estrutura da Remessa</CardTitle>
-                  <CardDescription>Pacote completo no formato e-Sfinge/TCE-MS</CardDescription>
+                  <CardDescription>
+                    Pacote completo no formato e-Sfinge/TCE-MS
+                  </CardDescription>
                 </div>
-                <Badge className="bg-primary text-primary-foreground">Pronta para Envio</Badge>
+                <Badge className="bg-primary text-primary-foreground">
+                  Pronta para Envio
+                </Badge>
               </div>
             </CardHeader>
             <CardContent>
-              <JsonViewer data={remessaData} title="remessa-350001-012024.json" />
+              <JsonViewer
+                data={remessaData}
+                title="remessa-350001-012024.json"
+              />
             </CardContent>
           </Card>
 
@@ -143,7 +167,9 @@ export default function RemessaPage() {
           <Card>
             <CardHeader>
               <CardTitle>Histórico de Versões</CardTitle>
-              <CardDescription>Versões anteriores desta remessa</CardDescription>
+              <CardDescription>
+                Versões anteriores desta remessa
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="overflow-auto rounded-lg border border-border">
@@ -160,20 +186,35 @@ export default function RemessaPage() {
                   <TableBody>
                     {versionHistory.map((version, index) => (
                       <TableRow key={index}>
-                        <TableCell className="font-mono font-semibold">{version.versao}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{version.data}</TableCell>
-                        <TableCell className="text-sm">{version.registros} registros</TableCell>
+                        <TableCell className="font-mono font-semibold">
+                          {version.versao}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {version.data}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {version.registros} registros
+                        </TableCell>
                         <TableCell>
-                          {version.status === "Atual" ? (
-                            <Badge className="bg-success/20 text-success">Atual</Badge>
+                          {version.status === 'Atual' ? (
+                            <Badge className="bg-success/20 text-success">
+                              Atual
+                            </Badge>
                           ) : (
-                            <Badge variant="outline" className="bg-transparent text-muted-foreground">
+                            <Badge
+                              variant="outline"
+                              className="bg-transparent text-muted-foreground"
+                            >
                               Anterior
                             </Badge>
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" className="h-8 bg-transparent">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 bg-transparent"
+                          >
                             Visualizar
                           </Button>
                         </TableCell>
@@ -190,13 +231,16 @@ export default function RemessaPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div className="text-sm">
-                  <p className="font-medium text-foreground">Remessa validada e pronta para envio</p>
+                  <p className="font-medium text-foreground">
+                    Remessa validada e pronta para envio
+                  </p>
                   <p className="text-muted-foreground">
-                    Ao clicar em &quot;Enviar ao TCE&quot;, a remessa será submetida ao sistema e-Sfinge
+                    Ao clicar em &quot;Enviar ao TCE&quot;, a remessa será
+                    submetida ao sistema e-Sfinge
                   </p>
                 </div>
                 <Button size="lg" className="bg-primary">
-                  <Send className="mr-2 h-5 w-5" />
+                  <Send className=" h-5 w-5" />
                   Enviar ao TCE
                 </Button>
               </div>
@@ -205,5 +249,5 @@ export default function RemessaPage() {
         </div>
       </main>
     </div>
-  )
+  );
 }
