@@ -7,9 +7,9 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'e-Sfinge/TCE-MS | POC Integração',
+  title: 'Sync',
   description:
-    'Sistema de integração com o e-Sfinge/TCE-MS - Prova de Conceito',
+    'Sistema de sincronização de dados entre o e-Sfinge/TCE-MS e o sistema de gestão de contas a pagar',
   generator: 'v0.app',
   icons: {
     icon: [
