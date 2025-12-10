@@ -1,291 +1,390 @@
-"use client"
+'use client';
 
-import { useState } from "react"
-import { Sidebar } from "@/components/sidebar"
-import { PageHeader } from "@/components/page-header"
-import { JsonViewer } from "@/components/json-viewer"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { FileText, Filter, Eye, CheckCircle2, AlertCircle, Clock } from "lucide-react"
+import { useState, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { DashboardLayout } from '@/components/dashboard-layout';
+import { PageHeader } from '@/components/page-header';
+import { JsonViewer } from '@/components/json-viewer';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { FileText, Filter, X, ArrowUpDown, User, Globe } from 'lucide-react';
+import { useAuditLogs } from '@/hooks/use-audit';
+import type { AuditLog, AuditAction } from '@/types';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
-const logsData = [
+const actionLabels: Record<AuditAction, { label: string; className: string }> =
   {
-    id: "LOG-001",
-    acao: "Carregamento de dados",
-    usuario: "admin@prefeitura.ms.gov.br",
-    timestamp: "26/01/2024 14:20:15",
-    status: "Sucesso",
-    detalhes: {
-      arquivo: "dados-origem.json",
-      registros: 5,
-      tamanho: "2.3 KB",
+    CREATE: {
+      label: 'Criar',
+      className: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
     },
-  },
-  {
-    id: "LOG-002",
-    acao: "Transformação ETL",
-    usuario: "admin@prefeitura.ms.gov.br",
-    timestamp: "26/01/2024 14:25:32",
-    status: "Sucesso",
-    detalhes: {
-      registrosEntrada: 5,
-      registrosSaida: 5,
-      tempoProcessamento: "0.84s",
+    UPDATE: {
+      label: 'Atualizar',
+      className: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
     },
-  },
-  {
-    id: "LOG-003",
-    acao: "Validação",
-    usuario: "admin@prefeitura.ms.gov.br",
-    timestamp: "26/01/2024 14:28:45",
-    status: "Aviso",
-    detalhes: {
-      erros: 2,
-      avisos: 2,
-      validos: 1,
-      regrasAplicadas: 15,
+    DELETE: {
+      label: 'Excluir',
+      className: 'bg-red-500/10 text-red-600 border-red-500/20',
     },
-  },
-  {
-    id: "LOG-004",
-    acao: "Geração de remessa",
-    usuario: "admin@prefeitura.ms.gov.br",
-    timestamp: "26/01/2024 14:30:10",
-    status: "Sucesso",
-    detalhes: {
-      versao: "v3",
-      registros: 5,
-      hash: "a3f5b9c2d1e8f4a7b6c9d2e5f8a1b4c7",
+    SEND: {
+      label: 'Enviar',
+      className: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
     },
-  },
-  {
-    id: "LOG-005",
-    acao: "Envio ao TCE",
-    usuario: "admin@prefeitura.ms.gov.br",
-    timestamp: "26/01/2024 14:35:22",
-    status: "Sucesso",
-    detalhes: {
-      protocolo: "TCE-2024-000456",
-      endpoint: "https://api.tce.ms.gov.br/v2/remessas",
-      statusCode: 200,
-      responseTime: "1.24s",
-    },
-  },
-]
+  };
+
+const getActionLabel = (
+  action: string
+): { label: string; className: string } => {
+  return (
+    actionLabels[action as AuditAction] || {
+      label: action,
+      className: 'bg-gray-500/10 text-gray-600 border-gray-500/20',
+    }
+  );
+};
 
 export default function LogsPage() {
-  const [filterAction, setFilterAction] = useState<string>("all")
-  const [selectedLog, setSelectedLog] = useState<(typeof logsData)[0] | null>(null)
-  const [dialogOpen, setDialogOpen] = useState(false)
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get('tab') || 'auditoria';
 
-  const filteredLogs = logsData.filter((log) => {
-    if (filterAction === "all") return true
-    return log.acao.toLowerCase().includes(filterAction.toLowerCase())
-  })
+  const [selectedAudit, setSelectedAudit] = useState<AuditLog | null>(null);
+  const [isAuditDialogOpen, setIsAuditDialogOpen] = useState(false);
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "Sucesso":
-        return <CheckCircle2 className="h-4 w-4 text-success" />
-      case "Erro":
-        return <AlertCircle className="h-4 w-4 text-destructive" />
-      case "Aviso":
-        return <Clock className="h-4 w-4 text-warning" />
-      default:
-        return null
-    }
-  }
+  // Audit filters
+  const [entityFilter, setEntityFilter] = useState<string>('all');
+  const [actionFilter, setActionFilter] = useState<string>('all');
+  const [userFilter, setUserFilter] = useState('');
 
-  const getStatusBadge = (status: string) => {
-    const variants = {
-      Sucesso: "bg-success/20 text-success",
-      Erro: "bg-destructive/20 text-destructive",
-      Aviso: "bg-warning/20 text-warning",
-    }
-    return variants[status as keyof typeof variants] || "bg-muted text-muted-foreground"
-  }
+  // API filters
+  const apiFilters = useMemo(
+    () => ({
+      entity: entityFilter !== 'all' ? entityFilter : undefined,
+      action: actionFilter !== 'all' ? actionFilter : undefined,
+    }),
+    [entityFilter, actionFilter]
+  );
 
-  const handleViewDetails = (log: (typeof logsData)[0]) => {
-    setSelectedLog(log)
-    setDialogOpen(true)
-  }
+  const {
+    data: auditData,
+    isLoading: isAuditLoading,
+    isError: isAuditError,
+  } = useAuditLogs(apiFilters);
+
+  const auditLogs = auditData?.data || [];
+
+  // Filter by user locally (since API might not support text search)
+  const filteredAuditLogs = useMemo(() => {
+    if (!userFilter) return auditLogs;
+    return auditLogs.filter((log) =>
+      log.user?.toLowerCase().includes(userFilter.toLowerCase())
+    );
+  }, [auditLogs, userFilter]);
+
+  const handleViewAudit = (audit: AuditLog) => {
+    setSelectedAudit(audit);
+    setIsAuditDialogOpen(true);
+  };
+
+  const clearAuditFilters = () => {
+    setEntityFilter('all');
+    setActionFilter('all');
+    setUserFilter('');
+  };
+
+  const hasAuditFilters =
+    entityFilter !== 'all' || actionFilter !== 'all' || userFilter;
+
+  // Get unique entities from the audit logs
+  const uniqueEntities = useMemo(() => {
+    return [...new Set(auditLogs.map((l) => l.entity))];
+  }, [auditLogs]);
 
   return (
-    <div className="flex min-h-screen">
-      <Sidebar />
+    <DashboardLayout>
+      <PageHeader
+        title="Logs do Sistema"
+        description="Visualize logs de comunicação e auditoria"
+      />
 
-      <main className="ml-64 flex-1">
-        <PageHeader title="Logs e Auditoria" description="Histórico completo de ações e eventos do sistema" />
+      <div className="p-6">
+        <Tabs defaultValue={initialTab} className="space-y-6">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="comunicacao">Comunicação e-Sfinge</TabsTrigger>
+            <TabsTrigger value="auditoria">Auditoria</TabsTrigger>
+          </TabsList>
 
-        <div className="space-y-6 p-8">
-          {/* Stats */}
-          <div className="grid gap-4 md:grid-cols-3">
+          {/* Communication Logs Tab */}
+          <TabsContent value="comunicacao" className="space-y-6">
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                  <FileText className="h-4 w-4" />
-                  Total de Logs
-                </CardTitle>
+              <CardHeader>
+                <CardTitle>Logs de Comunicação</CardTitle>
+                <CardDescription>
+                  Visualize os logs de comunicação acessando os detalhes de cada
+                  remessa
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold">{logsData.length}</p>
-                <p className="text-xs text-muted-foreground">Últimas 24 horas</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                  <CheckCircle2 className="h-4 w-4 text-success" />
-                  Operações Bem-sucedidas
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold text-success">
-                  {logsData.filter((l) => l.status === "Sucesso").length}
-                </p>
-                <p className="text-xs text-muted-foreground">80% do total</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                  <AlertCircle className="h-4 w-4 text-warning" />
-                  Avisos/Erros
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold text-warning">
-                  {logsData.filter((l) => l.status !== "Sucesso").length}
-                </p>
-                <p className="text-xs text-muted-foreground">Requerem atenção</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Logs Table */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Histórico de Ações</CardTitle>
-                  <CardDescription>Trilha de auditoria completa do fluxo da POC</CardDescription>
+                <div className="text-center py-8 text-muted-foreground">
+                  <FileText className="h-8 w-8 mx-auto mb-2" />
+                  <p>
+                    Os logs de comunicação estão disponíveis nos detalhes de
+                    cada remessa.
+                  </p>
+                  <p className="text-sm mt-1">
+                    Acesse a página de Remessas para visualizá-los.
+                  </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-muted-foreground" />
-                  <Select value={filterAction} onValueChange={setFilterAction}>
-                    <SelectTrigger className="w-[200px] bg-transparent">
-                      <SelectValue placeholder="Filtrar por ação" />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Audit Logs Tab */}
+          <TabsContent value="auditoria" className="space-y-6">
+            {/* Filters */}
+            <Card>
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-base">Filtros</CardTitle>
+                  </div>
+                  {hasAuditFilters && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearAuditFilters}
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Limpar
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-4">
+                  <Select value={entityFilter} onValueChange={setEntityFilter}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Entidade" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Todas as Ações</SelectItem>
-                      <SelectItem value="carregamento">Carregamento</SelectItem>
-                      <SelectItem value="transformação">Transformação</SelectItem>
-                      <SelectItem value="validação">Validação</SelectItem>
-                      <SelectItem value="envio">Envio ao TCE</SelectItem>
+                      <SelectItem value="all">Todas as entidades</SelectItem>
+                      {uniqueEntities.map((entity) => (
+                        <SelectItem key={entity} value={entity}>
+                          {entity}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
+
+                  <Select value={actionFilter} onValueChange={setActionFilter}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Ação" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas as ações</SelectItem>
+                      {Object.entries(actionLabels).map(
+                        ([value, { label }]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        )
+                      )}
+                    </SelectContent>
+                  </Select>
+
+                  <Input
+                    placeholder="Usuário"
+                    value={userFilter}
+                    onChange={(e) => setUserFilter(e.target.value)}
+                    className="w-[200px]"
+                  />
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-auto rounded-lg border border-border">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead className="w-[100px]">ID</TableHead>
-                      <TableHead>Ação</TableHead>
-                      <TableHead>Usuário</TableHead>
-                      <TableHead>Timestamp</TableHead>
-                      <TableHead className="w-[120px]">Status</TableHead>
-                      <TableHead className="w-[100px] text-right">Detalhes</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredLogs.map((log) => (
-                      <TableRow key={log.id}>
-                        <TableCell className="font-mono text-xs">{log.id}</TableCell>
-                        <TableCell className="font-medium">{log.acao}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{log.usuario}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{log.timestamp}</TableCell>
-                        <TableCell>
-                          <Badge className={getStatusBadge(log.status)}>
-                            <span className="flex items-center gap-1">
-                              {getStatusIcon(log.status)}
-                              {log.status}
-                            </span>
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewDetails(log)}
-                            className="h-8 bg-transparent"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
+              </CardContent>
+            </Card>
+
+            {/* Audit Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Logs de Auditoria</CardTitle>
+                <CardDescription>
+                  {auditData?.total || 0} registro(s) encontrado(s)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isAuditLoading ? (
+                  <div className="space-y-3">
+                    {[...Array(5)].map((_, i) => (
+                      <Skeleton key={i} className="h-12 w-full" />
                     ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
+                  </div>
+                ) : isAuditError ? (
+                  <div className="text-center py-8 text-destructive">
+                    <p>Erro ao carregar logs. Tente novamente.</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Data/Hora</TableHead>
+                        <TableHead>Entidade</TableHead>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Ação</TableHead>
+                        <TableHead>Usuário</TableHead>
+                        <TableHead>IP</TableHead>
+                        <TableHead className="text-right">Detalhes</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredAuditLogs.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="h-24 text-center">
+                            <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                              <FileText className="h-8 w-8" />
+                              <p>Nenhum registro encontrado</p>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredAuditLogs.map((log) => (
+                          <TableRow key={log.id}>
+                            <TableCell className="whitespace-nowrap">
+                              {format(
+                                new Date(log.createdAt),
+                                'dd/MM/yyyy HH:mm',
+                                {
+                                  locale: ptBR,
+                                }
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{log.entity}</Badge>
+                            </TableCell>
+                            <TableCell className="font-mono text-sm">
+                              {log.entityId}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant="outline"
+                                className={getActionLabel(log.action).className}
+                              >
+                                {getActionLabel(log.action).label}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <User className="h-3 w-3 text-muted-foreground" />
+                                {log.user || 'Sistema'}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1 text-muted-foreground">
+                                <Globe className="h-3 w-3" />
+                                {log.ip || '—'}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleViewAudit(log)}
+                              >
+                                <ArrowUpDown className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
 
-      {/* Details Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl">
+      {/* Audit Details Dialog */}
+      <Dialog open={isAuditDialogOpen} onOpenChange={setIsAuditDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-primary" />
-              Detalhes do Log
-            </DialogTitle>
-            <DialogDescription>Informações completas sobre a ação executada</DialogDescription>
+            <DialogTitle>Detalhes da Alteração</DialogTitle>
           </DialogHeader>
-
-          {selectedLog && (
+          {selectedAudit && (
             <div className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <p className="text-xs text-muted-foreground">ID do Log</p>
-                  <p className="font-mono text-sm font-medium">{selectedLog.id}</p>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Entidade</p>
+                  <p className="font-medium">{selectedAudit.entity}</p>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Status</p>
-                  <Badge className={getStatusBadge(selectedLog.status)}>{selectedLog.status}</Badge>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Ação</p>
+                  <Badge
+                    variant="outline"
+                    className={getActionLabel(selectedAudit.action).className}
+                  >
+                    {getActionLabel(selectedAudit.action).label}
+                  </Badge>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Ação Executada</p>
-                  <p className="text-sm font-medium">{selectedLog.acao}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Timestamp</p>
-                  <p className="text-sm font-medium">{selectedLog.timestamp}</p>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Usuário</p>
+                  <p className="font-medium">
+                    {selectedAudit.user || 'Sistema'}
+                  </p>
                 </div>
               </div>
 
-              <div>
-                <p className="mb-2 text-xs text-muted-foreground">Usuário</p>
-                <p className="text-sm font-medium">{selectedLog.usuario}</p>
-              </div>
-
-              <div>
-                <p className="mb-2 text-xs text-muted-foreground">Detalhes Técnicos</p>
-                <JsonViewer data={selectedLog.detalhes} />
+              <div className="grid grid-cols-2 gap-4">
+                {selectedAudit.oldValue && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Valor Anterior</p>
+                    <JsonViewer data={selectedAudit.oldValue} />
+                  </div>
+                )}
+                {selectedAudit.newValue && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Novo Valor</p>
+                    <JsonViewer
+                      data={selectedAudit.newValue as Record<string, unknown>}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
-    </div>
-  )
+    </DashboardLayout>
+  );
 }
