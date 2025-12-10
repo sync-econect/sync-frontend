@@ -1,13 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { PageHeader } from '@/components/page-header';
-import { RawDataStatusBadge, ValidationLevelBadge } from '@/components/status-badge';
+import {
+  RawDataStatusBadge,
+  ValidationLevelBadge,
+} from '@/components/status-badge';
 import { JsonViewer } from '@/components/json-viewer';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
@@ -48,8 +58,11 @@ import {
   Package,
   Filter,
   X,
+  Loader2,
 } from 'lucide-react';
-import { mockRawData, mockValidations, mockUnits } from '@/lib/mock-data';
+import { useRawData } from '@/hooks/use-raw-data';
+import { useUnits } from '@/hooks/use-units';
+import { useCreateRemittance } from '@/hooks/use-remittances';
 import type { RawData, RawDataStatus, ModuleType } from '@/types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -72,20 +85,28 @@ const statusOptions: { value: RawDataStatus; label: string }[] = [
 ];
 
 export default function DadosPage() {
-  const [selectedData, setSelectedData] = useState<RawData | null>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [unitFilter, setUnitFilter] = useState<string>('all');
   const [moduleFilter, setModuleFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [competencyFilter, setCompetencyFilter] = useState('');
 
-  const filteredData = mockRawData.filter((d) => {
-    if (unitFilter !== 'all' && d.unitId !== unitFilter) return false;
-    if (moduleFilter !== 'all' && d.module !== moduleFilter) return false;
-    if (statusFilter !== 'all' && d.status !== statusFilter) return false;
-    if (competencyFilter && !d.competency.includes(competencyFilter)) return false;
-    return true;
-  });
+  const [selectedData, setSelectedData] = useState<RawData | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  // API filters
+  const apiFilters = useMemo(
+    () => ({
+      unitId: unitFilter !== 'all' ? parseInt(unitFilter) : undefined,
+      module: moduleFilter !== 'all' ? moduleFilter : undefined,
+      status: statusFilter !== 'all' ? statusFilter : undefined,
+      competency: competencyFilter || undefined,
+    }),
+    [unitFilter, moduleFilter, statusFilter, competencyFilter]
+  );
+
+  const { data: rawData = [], isLoading, isError } = useRawData(apiFilters);
+  const { data: units = [] } = useUnits();
+  const createRemittance = useCreateRemittance();
 
   const handleViewDetails = (data: RawData) => {
     setSelectedData(data);
@@ -96,8 +117,14 @@ export default function DadosPage() {
     toast.info(`Validando dados #${data.id}...`);
   };
 
-  const handleCreateRemittance = (data: RawData) => {
-    toast.success(`Remessa criada a partir dos dados #${data.id}!`);
+  const handleCreateRemittance = async (data: RawData) => {
+    try {
+      await createRemittance.mutateAsync({
+        rawDataId: parseInt(data.id),
+      });
+    } catch {
+      // Error is handled in the hook
+    }
   };
 
   const clearFilters = () => {
@@ -112,10 +139,6 @@ export default function DadosPage() {
     moduleFilter !== 'all' ||
     statusFilter !== 'all' ||
     competencyFilter !== '';
-
-  const dataValidations = mockValidations.filter(
-    (v) => v.rawDataId === selectedData?.id
-  );
 
   return (
     <DashboardLayout>
@@ -149,7 +172,7 @@ export default function DadosPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas as unidades</SelectItem>
-                  {mockUnits.map((unit) => (
+                  {units.map((unit) => (
                     <SelectItem key={unit.id} value={unit.id}>
                       {unit.code} - {unit.name}
                     </SelectItem>
@@ -200,85 +223,114 @@ export default function DadosPage() {
           <CardHeader>
             <CardTitle>Dados Brutos</CardTitle>
             <CardDescription>
-              {filteredData.length} registro(s) encontrado(s)
+              {rawData.length} registro(s) encontrado(s)
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Unidade</TableHead>
-                  <TableHead>Módulo</TableHead>
-                  <TableHead>Competência</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Recebido em</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredData.length === 0 ? (
+            {isLoading ? (
+              <div className="space-y-3">
+                {[...Array(5)].map((_, i) => (
+                  <Skeleton key={i} className="h-16 w-full" />
+                ))}
+              </div>
+            ) : isError ? (
+              <div className="text-center py-8 text-destructive">
+                <p>Erro ao carregar dados. Tente novamente.</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center">
-                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                        <Database className="h-8 w-8" />
-                        <p>Nenhum dado encontrado</p>
-                      </div>
-                    </TableCell>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Unidade</TableHead>
+                    <TableHead>Módulo</TableHead>
+                    <TableHead>Competência</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Recebido em</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
-                ) : (
-                  filteredData.map((data) => (
-                    <TableRow key={data.id}>
-                      <TableCell className="font-medium">#{data.id}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium">{data.unit?.code}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {data.unit?.name}
-                          </span>
+                </TableHeader>
+                <TableBody>
+                  {rawData.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="h-24 text-center">
+                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                          <Database className="h-8 w-8" />
+                          <p>Nenhum dado encontrado</p>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{moduleLabels[data.module]}</Badge>
-                      </TableCell>
-                      <TableCell>{data.competency}</TableCell>
-                      <TableCell>
-                        <RawDataStatusBadge status={data.status} />
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(data.createdAt), 'dd/MM/yyyy HH:mm', {
-                          locale: ptBR,
-                        })}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleViewDetails(data)}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              Ver detalhes
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleValidate(data)}>
-                              <CheckCircle2 className="mr-2 h-4 w-4" />
-                              Validar agora
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleCreateRemittance(data)}>
-                              <Package className="mr-2 h-4 w-4" />
-                              Criar remessa
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    rawData.map((data) => (
+                      <TableRow key={data.id}>
+                        <TableCell className="font-medium">
+                          #{data.id}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium">
+                              {data.unit?.code}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {data.unit?.name}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {moduleLabels[data.module]}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{data.competency}</TableCell>
+                        <TableCell>
+                          <RawDataStatusBadge status={data.status} />
+                        </TableCell>
+                        <TableCell>
+                          {format(
+                            new Date(data.createdAt),
+                            'dd/MM/yyyy HH:mm',
+                            {
+                              locale: ptBR,
+                            }
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => handleViewDetails(data)}
+                              >
+                                <Eye className=" h-4 w-4" />
+                                Ver detalhes
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => handleValidate(data)}
+                              >
+                                <CheckCircle2 className=" h-4 w-4" />
+                                Validar agora
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleCreateRemittance(data)}
+                                disabled={createRemittance.isPending}
+                              >
+                                <Package className=" h-4 w-4" />
+                                Criar remessa
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -297,7 +349,9 @@ export default function DadosPage() {
                   {selectedData?.competency}
                 </SheetDescription>
               </div>
-              {selectedData && <RawDataStatusBadge status={selectedData.status} />}
+              {selectedData && (
+                <RawDataStatusBadge status={selectedData.status} />
+              )}
             </div>
           </SheetHeader>
 
@@ -317,35 +371,10 @@ export default function DadosPage() {
 
               <TabsContent value="validations" className="m-0">
                 <div className="space-y-3">
-                  {dataValidations.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald-500" />
-                      <p>Nenhuma validação pendente</p>
-                    </div>
-                  ) : (
-                    dataValidations.map((validation) => (
-                      <div
-                        key={validation.id}
-                        className="p-4 rounded-lg border bg-card"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <ValidationLevelBadge level={validation.level} />
-                              <code className="text-xs bg-muted px-2 py-1 rounded">
-                                {validation.code}
-                              </code>
-                            </div>
-                            <p className="text-sm">{validation.message}</p>
-                            <p className="text-xs text-muted-foreground">
-                              Campo: <strong>{validation.field}</strong> | Valor:{' '}
-                              <strong>{validation.value}</strong>
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
+                  <div className="text-center py-8 text-muted-foreground">
+                    <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald-500" />
+                    <p>Nenhuma validação pendente</p>
+                  </div>
                 </div>
               </TabsContent>
             </ScrollArea>
@@ -356,11 +385,20 @@ export default function DadosPage() {
               variant="outline"
               onClick={() => selectedData && handleValidate(selectedData)}
             >
-              <CheckCircle2 className="mr-2 h-4 w-4" />
+              <CheckCircle2 className=" h-4 w-4" />
               Validar
             </Button>
-            <Button onClick={() => selectedData && handleCreateRemittance(selectedData)}>
-              <Package className="mr-2 h-4 w-4" />
+            <Button
+              onClick={() =>
+                selectedData && handleCreateRemittance(selectedData)
+              }
+              disabled={createRemittance.isPending}
+            >
+              {createRemittance.isPending ? (
+                <Loader2 className=" h-4 w-4 animate-spin" />
+              ) : (
+                <Package className=" h-4 w-4" />
+              )}
               Criar Remessa
             </Button>
           </div>
@@ -369,4 +407,3 @@ export default function DadosPage() {
     </DashboardLayout>
   );
 }
-

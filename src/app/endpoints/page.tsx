@@ -149,7 +149,7 @@ export default function EndpointsPage() {
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
                   <Button onClick={() => handleOpenDialog()}>
-                    <Plus className="mr-2 h-4 w-4" />
+                    <Plus className=" h-4 w-4" />
                     Novo Endpoint
                   </Button>
                 </DialogTrigger>
@@ -285,7 +285,7 @@ export default function EndpointsPage() {
                           size="sm"
                           onClick={() => handleOpenDialog()}
                         >
-                          <Plus className="mr-2 h-4 w-4" />
+                          <Plus className=" h-4 w-4" />
                           Configurar primeiro endpoint
                         </Button>
                       </div>

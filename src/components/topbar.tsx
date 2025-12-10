@@ -43,11 +43,11 @@ export function Topbar() {
       <div className="flex items-center gap-4">
         {/* Unit Selector */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          {/* <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Building2 className="h-4 w-4" />
             <span className="hidden sm:inline">Unidade:</span>
-          </div>
-          <Select value={selectedUnit.id} onValueChange={handleUnitChange}>
+          </div> */}
+          {/* <Select value={selectedUnit.id} onValueChange={handleUnitChange}>
             <SelectTrigger className="w-[280px] h-9">
               <SelectValue>
                 <span className="font-medium">{selectedUnit.code}</span>
@@ -68,11 +68,13 @@ export function Topbar() {
                   </SelectItem>
                 ))}
             </SelectContent>
-          </Select>
+          </Select> */}
 
           {/* Environment Badge */}
-          <Badge
-            variant={selectedUnit.ambiente === 'PRODUCAO' ? 'default' : 'secondary'}
+          {/* <Badge
+            variant={
+              selectedUnit.ambiente === 'PRODUCAO' ? 'default' : 'secondary'
+            }
             className={
               selectedUnit.ambiente === 'PRODUCAO'
                 ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20'
@@ -80,7 +82,7 @@ export function Topbar() {
             }
           >
             {selectedUnit.ambiente === 'PRODUCAO' ? 'Produção' : 'Homologação'}
-          </Badge>
+          </Badge> */}
         </div>
       </div>
 
@@ -100,7 +102,9 @@ export function Topbar() {
             </Avatar>
             <div className="hidden md:flex flex-col items-start text-sm">
               <span className="font-medium">{mockUser.name}</span>
-              <span className="text-xs text-muted-foreground">{mockUser.role}</span>
+              <span className="text-xs text-muted-foreground">
+                {mockUser.role}
+              </span>
             </div>
             <ChevronDown className="h-4 w-4 text-muted-foreground" />
           </Button>
@@ -109,16 +113,16 @@ export function Topbar() {
           <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem>
-            <User className="mr-2 h-4 w-4" />
+            <User className=" h-4 w-4" />
             Perfil
           </DropdownMenuItem>
           <DropdownMenuItem>
-            <Settings className="mr-2 h-4 w-4" />
+            <Settings className=" h-4 w-4" />
             Configurações
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleLogout} className="text-destructive">
-            <LogOut className="mr-2 h-4 w-4" />
+            <LogOut className=" h-4 w-4" />
             Sair
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -126,4 +130,3 @@ export function Topbar() {
     </header>
   );
 }
-

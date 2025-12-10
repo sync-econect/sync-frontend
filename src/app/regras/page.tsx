@@ -4,12 +4,19 @@ import { useState } from 'react';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { PageHeader } from '@/components/page-header';
 import { ValidationLevelBadge } from '@/components/status-badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
@@ -35,9 +42,27 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil, ShieldCheck, Search, Filter, X } from 'lucide-react';
-import { mockValidationRules } from '@/lib/mock-data';
-import type { ValidationRule, ModuleType, ValidationOperator, ValidationLevel } from '@/types';
+import {
+  Plus,
+  Pencil,
+  ShieldCheck,
+  Search,
+  Filter,
+  X,
+  Loader2,
+} from 'lucide-react';
+import {
+  useValidationRules,
+  useCreateValidationRule,
+  useUpdateValidationRule,
+  useToggleValidationRuleActive,
+} from '@/hooks/use-validation-rules';
+import type {
+  ValidationRule,
+  ModuleType,
+  ValidationOperator,
+  ValidationLevel,
+} from '@/types';
 import { toast } from 'sonner';
 
 const moduleLabels: Record<ModuleType, string> = {
@@ -64,7 +89,11 @@ const operatorLabels: Record<ValidationOperator, string> = {
 };
 
 export default function RegrasPage() {
-  const [rules, setRules] = useState<ValidationRule[]>(mockValidationRules);
+  const { data: rules = [], isLoading, isError } = useValidationRules();
+  const createRule = useCreateValidationRule();
+  const updateRule = useUpdateValidationRule();
+  const toggleActive = useToggleValidationRuleActive();
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<ValidationRule | null>(null);
 
@@ -131,7 +160,7 @@ export default function RegrasPage() {
     setIsDialogOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.code || !formData.field || !formData.message) {
@@ -139,33 +168,26 @@ export default function RegrasPage() {
       return;
     }
 
-    if (editingRule) {
-      setRules((prev) =>
-        prev.map((r) =>
-          r.id === editingRule.id ? { ...r, ...formData } : r
-        )
-      );
-      toast.success('Regra atualizada com sucesso!');
-    } else {
-      const newRule: ValidationRule = {
-        id: String(Date.now()),
-        ...formData,
-        createdAt: new Date().toISOString(),
-      };
-      setRules((prev) => [...prev, newRule]);
-      toast.success('Regra criada com sucesso!');
+    try {
+      if (editingRule) {
+        await updateRule.mutateAsync({
+          id: parseInt(editingRule.id),
+          payload: formData,
+        });
+      } else {
+        await createRule.mutateAsync(formData);
+      }
+      setIsDialogOpen(false);
+    } catch {
+      // Error is handled in the hook
     }
-
-    setIsDialogOpen(false);
   };
 
   const handleToggleActive = (rule: ValidationRule) => {
-    setRules((prev) =>
-      prev.map((r) =>
-        r.id === rule.id ? { ...r, active: !r.active } : r
-      )
-    );
-    toast.success(rule.active ? 'Regra desativada' : 'Regra ativada');
+    toggleActive.mutate({
+      id: parseInt(rule.id),
+      active: !rule.active,
+    });
   };
 
   const clearFilters = () => {
@@ -176,7 +198,12 @@ export default function RegrasPage() {
   };
 
   const hasFilters =
-    searchTerm || moduleFilter !== 'all' || levelFilter !== 'all' || showOnlyActive;
+    searchTerm ||
+    moduleFilter !== 'all' ||
+    levelFilter !== 'all' ||
+    showOnlyActive;
+
+  const isSubmitting = createRule.isPending || updateRule.isPending;
 
   return (
     <DashboardLayout>
@@ -266,7 +293,7 @@ export default function RegrasPage() {
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
                   <Button onClick={() => handleOpenDialog()}>
-                    <Plus className="mr-2 h-4 w-4" />
+                    <Plus className=" h-4 w-4" />
                     Nova Regra
                   </Button>
                 </DialogTrigger>
@@ -274,7 +301,9 @@ export default function RegrasPage() {
                   <form onSubmit={handleSubmit}>
                     <DialogHeader>
                       <DialogTitle>
-                        {editingRule ? 'Editar Regra' : 'Nova Regra de Validação'}
+                        {editingRule
+                          ? 'Editar Regra'
+                          : 'Nova Regra de Validação'}
                       </DialogTitle>
                       <DialogDescription>
                         {editingRule
@@ -309,11 +338,13 @@ export default function RegrasPage() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              {Object.entries(moduleLabels).map(([value, label]) => (
-                                <SelectItem key={value} value={value}>
-                                  {label}
-                                </SelectItem>
-                              ))}
+                              {Object.entries(moduleLabels).map(
+                                ([value, label]) => (
+                                  <SelectItem key={value} value={value}>
+                                    {label}
+                                  </SelectItem>
+                                )
+                              )}
                             </SelectContent>
                           </Select>
                         </div>
@@ -345,11 +376,13 @@ export default function RegrasPage() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              {Object.entries(operatorLabels).map(([value, label]) => (
-                                <SelectItem key={value} value={value}>
-                                  {label}
-                                </SelectItem>
-                              ))}
+                              {Object.entries(operatorLabels).map(
+                                ([value, label]) => (
+                                  <SelectItem key={value} value={value}>
+                                    {label}
+                                  </SelectItem>
+                                )
+                              )}
                             </SelectContent>
                           </Select>
                         </div>
@@ -359,7 +392,10 @@ export default function RegrasPage() {
                             id="value"
                             value={formData.value}
                             onChange={(e) =>
-                              setFormData({ ...formData, value: e.target.value })
+                              setFormData({
+                                ...formData,
+                                value: e.target.value,
+                              })
                             }
                             placeholder="Valor para comparação"
                           />
@@ -394,7 +430,10 @@ export default function RegrasPage() {
                           id="message"
                           value={formData.message}
                           onChange={(e) =>
-                            setFormData({ ...formData, message: e.target.value })
+                            setFormData({
+                              ...formData,
+                              message: e.target.value,
+                            })
                           }
                           placeholder="Mensagem exibida quando a validação falhar"
                           required
@@ -418,10 +457,14 @@ export default function RegrasPage() {
                         type="button"
                         variant="outline"
                         onClick={() => setIsDialogOpen(false)}
+                        disabled={isSubmitting}
                       >
                         Cancelar
                       </Button>
-                      <Button type="submit">
+                      <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting && (
+                          <Loader2 className=" h-4 w-4 animate-spin" />
+                        )}
                         {editingRule ? 'Salvar' : 'Criar'}
                       </Button>
                     </DialogFooter>
@@ -431,76 +474,90 @@ export default function RegrasPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Código</TableHead>
-                  <TableHead>Módulo</TableHead>
-                  <TableHead>Campo</TableHead>
-                  <TableHead>Operador</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead>Nível</TableHead>
-                  <TableHead>Ativa</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredRules.length === 0 ? (
+            {isLoading ? (
+              <div className="space-y-3">
+                {[...Array(5)].map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : isError ? (
+              <div className="text-center py-8 text-destructive">
+                <p>Erro ao carregar regras. Tente novamente.</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={8} className="h-24 text-center">
-                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                        <ShieldCheck className="h-8 w-8" />
-                        <p>Nenhuma regra encontrada</p>
-                      </div>
-                    </TableCell>
+                    <TableHead>Código</TableHead>
+                    <TableHead>Módulo</TableHead>
+                    <TableHead>Campo</TableHead>
+                    <TableHead>Operador</TableHead>
+                    <TableHead>Valor</TableHead>
+                    <TableHead>Nível</TableHead>
+                    <TableHead>Ativa</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
-                ) : (
-                  filteredRules.map((rule) => (
-                    <TableRow key={rule.id}>
-                      <TableCell>
-                        <code className="text-xs bg-muted px-2 py-1 rounded font-medium">
-                          {rule.code}
-                        </code>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{moduleLabels[rule.module]}</Badge>
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {rule.field}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {operatorLabels[rule.operator]}
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {rule.value || '—'}
-                      </TableCell>
-                      <TableCell>
-                        <ValidationLevelBadge level={rule.level} />
-                      </TableCell>
-                      <TableCell>
-                        <Switch
-                          checked={rule.active}
-                          onCheckedChange={() => handleToggleActive(rule)}
-                        />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleOpenDialog(rule)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
+                </TableHeader>
+                <TableBody>
+                  {filteredRules.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="h-24 text-center">
+                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                          <ShieldCheck className="h-8 w-8" />
+                          <p>Nenhuma regra encontrada</p>
+                        </div>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    filteredRules.map((rule) => (
+                      <TableRow key={rule.id}>
+                        <TableCell>
+                          <code className="text-xs bg-muted px-2 py-1 rounded font-medium">
+                            {rule.code}
+                          </code>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {moduleLabels[rule.module]}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {rule.field}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {operatorLabels[rule.operator]}
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {rule.value || '—'}
+                        </TableCell>
+                        <TableCell>
+                          <ValidationLevelBadge level={rule.level} />
+                        </TableCell>
+                        <TableCell>
+                          <Switch
+                            checked={rule.active}
+                            onCheckedChange={() => handleToggleActive(rule)}
+                            disabled={toggleActive.isPending}
+                          />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleOpenDialog(rule)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </div>
     </DashboardLayout>
   );
 }
-

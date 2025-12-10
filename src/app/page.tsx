@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { PageHeader } from '@/components/page-header';
 import { KpiCard } from '@/components/kpi-card';
@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -61,13 +62,16 @@ import {
   FileJson,
   Copy,
   ArrowUpRight,
+  Loader2,
 } from 'lucide-react';
 import {
-  mockRemittances,
-  mockRemittanceStats,
-  mockValidations,
-  mockRemittanceLogs,
-} from '@/lib/mock-data';
+  useRemittances,
+  useRemittanceStats,
+  useRemittanceLogs,
+  useSendRemittance,
+  useCancelRemittance,
+  useRetryRemittance,
+} from '@/hooks/use-remittances';
 import type { Remittance, RemittanceStatus, ModuleType } from '@/types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -92,6 +96,17 @@ const statusOptions: { value: RemittanceStatus; label: string }[] = [
   { value: 'CANCELLED', label: 'Cancelada' },
 ];
 
+const statusTimelineLabels: Record<string, string> = {
+  PENDING: 'Pendente',
+  VALIDATING: 'Validando',
+  TRANSFORMING: 'Transformando',
+  READY: 'Pronta',
+  SENDING: 'Enviando',
+  SENT: 'Enviada',
+  ERROR: 'Erro',
+  CANCELLED: 'Cancelada',
+};
+
 export default function DashboardPage() {
   const [selectedRemittance, setSelectedRemittance] =
     useState<Remittance | null>(null);
@@ -100,15 +115,32 @@ export default function DashboardPage() {
   const [moduleFilter, setModuleFilter] = useState<string>('all');
   const [competencyFilter, setCompetencyFilter] = useState('');
 
-  const stats = mockRemittanceStats;
+  // API filters
+  const apiFilters = useMemo(
+    () => ({
+      status: statusFilter !== 'all' ? statusFilter : undefined,
+      module: moduleFilter !== 'all' ? moduleFilter : undefined,
+      competency: competencyFilter || undefined,
+    }),
+    [statusFilter, moduleFilter, competencyFilter]
+  );
 
-  const filteredRemittances = mockRemittances.filter((r) => {
-    if (statusFilter !== 'all' && r.status !== statusFilter) return false;
-    if (moduleFilter !== 'all' && r.module !== moduleFilter) return false;
-    if (competencyFilter && !r.competency.includes(competencyFilter))
-      return false;
-    return true;
-  });
+  const {
+    data: remittancesData,
+    isLoading,
+    isError,
+  } = useRemittances(apiFilters);
+  const { data: stats, isLoading: isStatsLoading } = useRemittanceStats();
+  const sendRemittance = useSendRemittance();
+  const cancelRemittance = useCancelRemittance();
+  const retryRemittance = useRetryRemittance();
+
+  const remittances = remittancesData?.data || [];
+
+  // Get logs for selected remittance
+  const { data: remittanceLogs = [] } = useRemittanceLogs(
+    selectedRemittance ? parseInt(selectedRemittance.id) : 0
+  );
 
   const handleViewDetails = (remittance: Remittance) => {
     setSelectedRemittance(remittance);
@@ -116,15 +148,15 @@ export default function DashboardPage() {
   };
 
   const handleSend = (remittance: Remittance) => {
-    toast.success(`Remessa ${remittance.id} enviada para o TCE!`);
+    sendRemittance.mutate(parseInt(remittance.id));
   };
 
   const handleRetry = (remittance: Remittance) => {
-    toast.info(`Reenviando remessa ${remittance.id}...`);
+    retryRemittance.mutate(parseInt(remittance.id));
   };
 
   const handleCancel = (remittance: Remittance) => {
-    toast.warning(`Remessa ${remittance.id} cancelada.`);
+    cancelRemittance.mutate(parseInt(remittance.id));
   };
 
   const clearFilters = () => {
@@ -136,14 +168,6 @@ export default function DashboardPage() {
   const hasFilters =
     statusFilter !== 'all' || moduleFilter !== 'all' || competencyFilter !== '';
 
-  const remittanceValidations = mockValidations.filter(
-    (v) => v.rawDataId === selectedRemittance?.rawDataId
-  );
-
-  const remittanceLogs = mockRemittanceLogs.filter(
-    (l) => l.remittanceId === selectedRemittance?.id
-  );
-
   return (
     <DashboardLayout>
       <PageHeader
@@ -154,36 +178,50 @@ export default function DashboardPage() {
       <div className="space-y-6 p-6">
         {/* KPI Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <KpiCard
-            title="Total de Remessas"
-            value={stats.total}
-            icon={Package}
-            trend={{ value: '+2 hoje', positive: true }}
-          />
-          <KpiCard
-            title="Enviadas com Sucesso"
-            value={stats.byStatus.SENT}
-            icon={CheckCircle2}
-            variant="success"
-          />
-          <KpiCard
-            title="Erros nas Últimas 24h"
-            value={stats.errorsLast24h}
-            icon={AlertTriangle}
-            variant="error"
-          />
-          <KpiCard
-            title="Último Protocolo"
-            value={stats.lastProtocol || '—'}
-            description={
-              stats.lastProtocolDate
-                ? format(new Date(stats.lastProtocolDate), "dd/MM 'às' HH:mm", {
-                    locale: ptBR,
-                  })
-                : undefined
-            }
-            icon={Clock}
-          />
+          {isStatsLoading ? (
+            <>
+              {[...Array(4)].map((_, i) => (
+                <Skeleton key={i} className="h-32 w-full" />
+              ))}
+            </>
+          ) : (
+            <>
+              <KpiCard
+                title="Total de Remessas"
+                value={stats?.total || 0}
+                icon={Package}
+                trend={{ value: '+2 hoje', positive: true }}
+              />
+              <KpiCard
+                title="Enviadas com Sucesso"
+                value={stats?.byStatus?.SENT || 0}
+                icon={CheckCircle2}
+                variant="success"
+              />
+              <KpiCard
+                title="Erros nas Últimas 24h"
+                value={stats?.errorsLast24h || 0}
+                icon={AlertTriangle}
+                variant="error"
+              />
+              <KpiCard
+                title="Último Protocolo"
+                value={stats?.lastProtocol || '—'}
+                description={
+                  stats?.lastProtocolDate
+                    ? format(
+                        new Date(stats.lastProtocolDate),
+                        "dd/MM 'às' HH:mm",
+                        {
+                          locale: ptBR,
+                        }
+                      )
+                    : undefined
+                }
+                icon={Clock}
+              />
+            </>
+          )}
         </div>
 
         {/* Filters */}
@@ -247,153 +285,167 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle>Remessas</CardTitle>
             <CardDescription>
-              {filteredRemittances.length} remessa(s) encontrada(s)
+              {remittancesData?.total || 0} remessa(s) encontrada(s)
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Unidade</TableHead>
-                  <TableHead>Módulo</TableHead>
-                  <TableHead>Competência</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Protocolo</TableHead>
-                  <TableHead>Criado em</TableHead>
-                  <TableHead>Enviado em</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredRemittances.length === 0 ? (
+            {isLoading ? (
+              <div className="space-y-3">
+                {[...Array(5)].map((_, i) => (
+                  <Skeleton key={i} className="h-16 w-full" />
+                ))}
+              </div>
+            ) : isError ? (
+              <div className="text-center py-8 text-destructive">
+                <p>Erro ao carregar remessas. Tente novamente.</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center">
-                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                        <Package className="h-8 w-8" />
-                        <p>Nenhuma remessa encontrada</p>
-                      </div>
-                    </TableCell>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Unidade</TableHead>
+                    <TableHead>Módulo</TableHead>
+                    <TableHead>Competência</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Protocolo</TableHead>
+                    <TableHead>Criado em</TableHead>
+                    <TableHead>Enviado em</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
-                ) : (
-                  filteredRemittances.map((remittance) => (
-                    <TableRow key={remittance.id}>
-                      <TableCell className="font-medium">
-                        #{remittance.id}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium">
-                            {remittance.unit?.code}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {remittance.unit?.name}
-                          </span>
+                </TableHeader>
+                <TableBody>
+                  {remittances.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={9} className="h-24 text-center">
+                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                          <Package className="h-8 w-8" />
+                          <p>Nenhuma remessa encontrada</p>
                         </div>
                       </TableCell>
-                      <TableCell>{moduleLabels[remittance.module]}</TableCell>
-                      <TableCell>{remittance.competency}</TableCell>
-                      <TableCell>
-                        <StatusBadge status={remittance.status} />
-                      </TableCell>
-                      <TableCell>
-                        {remittance.protocol ? (
-                          <code className="text-xs bg-muted px-2 py-1 rounded">
-                            {remittance.protocol}
-                          </code>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {format(
-                          new Date(remittance.createdAt),
-                          'dd/MM/yyyy HH:mm',
-                          {
-                            locale: ptBR,
-                          }
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {remittance.sentAt
-                          ? format(
-                              new Date(remittance.sentAt),
-                              'dd/MM/yyyy HH:mm',
-                              {
-                                locale: ptBR,
-                              }
-                            )
-                          : '—'}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => handleViewDetails(remittance)}
-                            >
-                              <Eye className="mr-2 h-4 w-4" />
-                              Ver detalhes
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            {remittance.status === 'READY' && (
-                              <DropdownMenuItem
-                                onClick={() => handleSend(remittance)}
-                              >
-                                <Send className="mr-2 h-4 w-4" />
-                                Enviar para TCE
-                              </DropdownMenuItem>
-                            )}
-                            {(remittance.status === 'ERROR' ||
-                              remittance.status === 'SENT') && (
-                              <DropdownMenuItem
-                                onClick={() => handleRetry(remittance)}
-                              >
-                                <RefreshCw className="mr-2 h-4 w-4" />
-                                Reenviar
-                              </DropdownMenuItem>
-                            )}
-                            {['PENDING', 'READY', 'SENDING'].includes(
-                              remittance.status
-                            ) && (
-                              <DropdownMenuItem
-                                onClick={() => handleCancel(remittance)}
-                                className="text-destructive"
-                              >
-                                <XCircle className="mr-2 h-4 w-4" />
-                                Cancelar
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    remittances.map((remittance) => (
+                      <TableRow key={remittance.id}>
+                        <TableCell className="font-medium">
+                          #{remittance.id}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium">
+                              {remittance.unit?.code}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {remittance.unit?.name}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>{moduleLabels[remittance.module]}</TableCell>
+                        <TableCell>{remittance.competency}</TableCell>
+                        <TableCell>
+                          <StatusBadge status={remittance.status} />
+                        </TableCell>
+                        <TableCell>
+                          {remittance.protocol ? (
+                            <code className="text-xs bg-muted px-2 py-1 rounded">
+                              {remittance.protocol}
+                            </code>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {format(
+                            new Date(remittance.createdAt),
+                            'dd/MM/yyyy HH:mm',
+                            {
+                              locale: ptBR,
+                            }
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {remittance.sentAt
+                            ? format(
+                                new Date(remittance.sentAt),
+                                'dd/MM/yyyy HH:mm',
+                                {
+                                  locale: ptBR,
+                                }
+                              )
+                            : '—'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => handleViewDetails(remittance)}
+                              >
+                                <Eye className=" h-4 w-4" />
+                                Ver detalhes
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              {remittance.status === 'READY' && (
+                                <DropdownMenuItem
+                                  onClick={() => handleSend(remittance)}
+                                >
+                                  <Send className=" h-4 w-4" />
+                                  Enviar para TCE
+                                </DropdownMenuItem>
+                              )}
+                              {(remittance.status === 'ERROR' ||
+                                remittance.status === 'SENT') && (
+                                <DropdownMenuItem
+                                  onClick={() => handleRetry(remittance)}
+                                >
+                                  <RefreshCw className=" h-4 w-4" />
+                                  Reenviar
+                                </DropdownMenuItem>
+                              )}
+                              {['PENDING', 'READY', 'SENDING'].includes(
+                                remittance.status
+                              ) && (
+                                <DropdownMenuItem
+                                  onClick={() => handleCancel(remittance)}
+                                  className="text-destructive"
+                                >
+                                  <XCircle className=" h-4 w-4" />
+                                  Cancelar
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
 
         {/* Status Distribution */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
-          {statusOptions.map((option) => (
-            <Card key={option.value} className="p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">
-                  {option.label}
-                </span>
-                <span className="text-2xl font-bold">
-                  {stats.byStatus[option.value] || 0}
-                </span>
-              </div>
-            </Card>
-          ))}
-        </div>
+        {!isStatsLoading && stats && (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
+            {statusOptions.map((option) => (
+              <Card key={option.value} className="p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    {option.label}
+                  </span>
+                  <span className="text-2xl font-bold">
+                    {stats.byStatus[option.value] || 0}
+                  </span>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Details Drawer */}
@@ -534,7 +586,7 @@ export default function DashboardPage() {
                                 : 'text-muted-foreground'
                             }`}
                           >
-                            {status}
+                            {statusTimelineLabels[status] || status}
                           </span>
                           {index < 5 && (
                             <ArrowUpRight className="h-3 w-3 text-muted-foreground rotate-45" />
@@ -548,8 +600,15 @@ export default function DashboardPage() {
                 {/* Actions */}
                 <div className="flex gap-2 pt-4">
                   {selectedRemittance?.status === 'READY' && (
-                    <Button onClick={() => handleSend(selectedRemittance)}>
-                      <Send className="mr-2 h-4 w-4" />
+                    <Button
+                      onClick={() => handleSend(selectedRemittance)}
+                      disabled={sendRemittance.isPending}
+                    >
+                      {sendRemittance.isPending ? (
+                        <Loader2 className=" h-4 w-4 animate-spin" />
+                      ) : (
+                        <Send className=" h-4 w-4" />
+                      )}
                       Enviar para TCE
                     </Button>
                   )}
@@ -560,8 +619,13 @@ export default function DashboardPage() {
                       onClick={() =>
                         selectedRemittance && handleRetry(selectedRemittance)
                       }
+                      disabled={retryRemittance.isPending}
                     >
-                      <RefreshCw className="mr-2 h-4 w-4" />
+                      {retryRemittance.isPending ? (
+                        <Loader2 className=" h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className=" h-4 w-4" />
+                      )}
                       Reenviar
                     </Button>
                   )}
@@ -573,8 +637,13 @@ export default function DashboardPage() {
                       onClick={() =>
                         selectedRemittance && handleCancel(selectedRemittance)
                       }
+                      disabled={cancelRemittance.isPending}
                     >
-                      <XCircle className="mr-2 h-4 w-4" />
+                      {cancelRemittance.isPending ? (
+                        <Loader2 className=" h-4 w-4 animate-spin" />
+                      ) : (
+                        <XCircle className=" h-4 w-4" />
+                      )}
                       Cancelar
                     </Button>
                   )}
@@ -600,7 +669,7 @@ export default function DashboardPage() {
                         toast.success('JSON copiado!');
                       }}
                     >
-                      <Copy className="mr-2 h-4 w-4" />
+                      <Copy className=" h-4 w-4" />
                       Copiar JSON
                     </Button>
                   </div>
@@ -610,44 +679,10 @@ export default function DashboardPage() {
 
               <TabsContent value="validations" className="m-0">
                 <div className="space-y-3">
-                  {remittanceValidations.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald-500" />
-                      <p>Nenhuma validação pendente</p>
-                    </div>
-                  ) : (
-                    remittanceValidations.map((validation) => (
-                      <div
-                        key={validation.id}
-                        className="p-4 rounded-lg border bg-card"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <Badge
-                                variant="outline"
-                                className={
-                                  validation.level === 'IMPEDITIVA'
-                                    ? 'bg-red-500/10 text-red-600 border-red-500/20'
-                                    : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
-                                }
-                              >
-                                {validation.level}
-                              </Badge>
-                              <code className="text-xs bg-muted px-2 py-1 rounded">
-                                {validation.code}
-                              </code>
-                            </div>
-                            <p className="text-sm">{validation.message}</p>
-                            <p className="text-xs text-muted-foreground">
-                              Campo: <strong>{validation.field}</strong> |
-                              Valor: <strong>{validation.value}</strong>
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
+                  <div className="text-center py-8 text-muted-foreground">
+                    <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald-500" />
+                    <p>Nenhuma validação pendente</p>
+                  </div>
                 </div>
               </TabsContent>
 

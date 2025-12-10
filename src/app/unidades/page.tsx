@@ -33,15 +33,20 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil, Building2 } from 'lucide-react';
-import { mockUnits } from '@/lib/mock-data';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Plus, Pencil, Building2, Loader2 } from 'lucide-react';
+import { useUnits, useCreateUnit, useUpdateUnit, useToggleUnitActive } from '@/hooks/use-units';
 import type { Unit, Environment } from '@/types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 
 export default function UnidadesPage() {
-  const [units, setUnits] = useState<Unit[]>(mockUnits);
+  const { data: units = [], isLoading, isError } = useUnits();
+  const createUnit = useCreateUnit();
+  const updateUnit = useUpdateUnit();
+  const toggleActive = useToggleUnitActive();
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
 
@@ -80,7 +85,7 @@ export default function UnidadesPage() {
     setIsDialogOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.code || !formData.name) {
@@ -88,38 +93,38 @@ export default function UnidadesPage() {
       return;
     }
 
-    if (editingUnit) {
-      setUnits((prev) =>
-        prev.map((u) =>
-          u.id === editingUnit.id
-            ? { ...u, ...formData }
-            : u
-        )
-      );
-      toast.success('Unidade atualizada com sucesso!');
-    } else {
-      const newUnit: Unit = {
-        id: String(Date.now()),
-        ...formData,
-        createdAt: new Date().toISOString(),
-      };
-      setUnits((prev) => [...prev, newUnit]);
-      toast.success('Unidade criada com sucesso!');
-    }
+    const payload = {
+      code: formData.code,
+      name: formData.name,
+      tokenProducao: formData.tokenProducao || undefined,
+      tokenHomologacao: formData.tokenHomologacao || undefined,
+      ambiente: formData.ambiente,
+      active: formData.active,
+    };
 
-    setIsDialogOpen(false);
+    try {
+      if (editingUnit) {
+        await updateUnit.mutateAsync({
+          id: parseInt(editingUnit.id),
+          payload,
+        });
+      } else {
+        await createUnit.mutateAsync(payload);
+      }
+      setIsDialogOpen(false);
+    } catch {
+      // Error is handled in the hook
+    }
   };
 
   const handleToggleActive = (unit: Unit) => {
-    setUnits((prev) =>
-      prev.map((u) =>
-        u.id === unit.id ? { ...u, active: !u.active } : u
-      )
-    );
-    toast.success(
-      unit.active ? 'Unidade desativada' : 'Unidade ativada'
-    );
+    toggleActive.mutate({
+      id: parseInt(unit.id),
+      active: !unit.active,
+    });
   };
+
+  const isSubmitting = createUnit.isPending || updateUnit.isPending;
 
   return (
     <DashboardLayout>
@@ -141,7 +146,7 @@ export default function UnidadesPage() {
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
                   <Button onClick={() => handleOpenDialog()}>
-                    <Plus className="mr-2 h-4 w-4" />
+                    <Plus className=" h-4 w-4" />
                     Nova Unidade
                   </Button>
                 </DialogTrigger>
@@ -265,10 +270,14 @@ export default function UnidadesPage() {
                         type="button"
                         variant="outline"
                         onClick={() => setIsDialogOpen(false)}
+                        disabled={isSubmitting}
                       >
                         Cancelar
                       </Button>
-                      <Button type="submit">
+                      <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting && (
+                          <Loader2 className=" h-4 w-4 animate-spin" />
+                        )}
                         {editingUnit ? 'Salvar' : 'Criar'}
                       </Button>
                     </DialogFooter>
@@ -278,85 +287,97 @@ export default function UnidadesPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Código</TableHead>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Ambiente</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Criado em</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {units.length === 0 ? (
+            {isLoading ? (
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : isError ? (
+              <div className="text-center py-8 text-destructive">
+                <p>Erro ao carregar unidades. Tente novamente.</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
-                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                        <Building2 className="h-8 w-8" />
-                        <p>Nenhuma unidade cadastrada</p>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleOpenDialog()}
-                        >
-                          <Plus className="mr-2 h-4 w-4" />
-                          Cadastrar primeira unidade
-                        </Button>
-                      </div>
-                    </TableCell>
+                    <TableHead>Código</TableHead>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Ambiente</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Criado em</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
-                ) : (
-                  units.map((unit) => (
-                    <TableRow key={unit.id}>
-                      <TableCell className="font-mono font-medium">
-                        {unit.code}
-                      </TableCell>
-                      <TableCell>{unit.name}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={
-                            unit.ambiente === 'PRODUCAO'
-                              ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-                              : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
-                          }
-                        >
-                          {unit.ambiente === 'PRODUCAO'
-                            ? 'Produção'
-                            : 'Homologação'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Switch
-                          checked={unit.active}
-                          onCheckedChange={() => handleToggleActive(unit)}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(unit.createdAt), 'dd/MM/yyyy', {
-                          locale: ptBR,
-                        })}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleOpenDialog(unit)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
+                </TableHeader>
+                <TableBody>
+                  {units.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-24 text-center">
+                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                          <Building2 className="h-8 w-8" />
+                          <p>Nenhuma unidade cadastrada</p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenDialog()}
+                          >
+                            <Plus className=" h-4 w-4" />
+                            Cadastrar primeira unidade
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    units.map((unit) => (
+                      <TableRow key={unit.id}>
+                        <TableCell className="font-mono font-medium">
+                          {unit.code}
+                        </TableCell>
+                        <TableCell>{unit.name}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={
+                              unit.ambiente === 'PRODUCAO'
+                                ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                                : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
+                            }
+                          >
+                            {unit.ambiente === 'PRODUCAO'
+                              ? 'Produção'
+                              : 'Homologação'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Switch
+                            checked={unit.active}
+                            onCheckedChange={() => handleToggleActive(unit)}
+                            disabled={toggleActive.isPending}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(unit.createdAt), 'dd/MM/yyyy', {
+                            locale: ptBR,
+                          })}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleOpenDialog(unit)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </div>
     </DashboardLayout>
   );
 }
-
