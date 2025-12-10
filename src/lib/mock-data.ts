@@ -297,7 +297,10 @@ export const mockRemittanceLogs: RemittanceLog[] = [
     direction: 'REQUEST',
     url: '/api/v1/remessas',
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer xxx' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer xxx',
+    },
     body: { tipoRemessa: 'CONTRATO', dados: {} },
     createdAt: '2024-12-01T11:05:00Z',
   },
@@ -319,7 +322,10 @@ export const mockRemittanceLogs: RemittanceLog[] = [
     direction: 'REQUEST',
     url: '/api/v1/remessas',
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer xxx' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer xxx',
+    },
     body: { tipoRemessa: 'LIQUIDACAO', dados: {} },
     createdAt: '2024-11-28T17:00:00Z',
   },
@@ -346,7 +352,7 @@ export const mockAuditLogs: AuditLog[] = [
     action: 'CREATE',
     user: 'admin@exemplo.gov.br',
     ip: '192.168.1.100',
-    newValue: mockUnits[0],
+    // newValue: mockUnits[0],
     createdAt: '2024-01-15T10:00:00Z',
   },
   {
@@ -356,7 +362,7 @@ export const mockAuditLogs: AuditLog[] = [
     action: 'CREATE',
     user: 'admin@exemplo.gov.br',
     ip: '192.168.1.100',
-    newValue: mockValidationRules[0],
+    // newValue: mockValidationRules[0],
     createdAt: '2024-01-10T08:00:00Z',
   },
   {
@@ -440,4 +446,3 @@ export const mockRemittanceStats: RemittanceStats = {
   lastProtocol: 'TCE-2024-001234',
   lastProtocolDate: '2024-12-01T11:05:00Z',
 };
-
