@@ -212,10 +212,10 @@ export default function RegrasPage() {
         description="Gerencie as regras de validação para os dados recebidos"
       />
 
-      <div className="space-y-6 p-6">
+      <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
         {/* Filters */}
-        <Card>
-          <CardHeader className="pb-4">
+        <Card className="gap-0">
+          <CardHeader className="pb-3 sm:pb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-muted-foreground" />
@@ -224,25 +224,25 @@ export default function RegrasPage() {
               {hasFilters && (
                 <Button variant="ghost" size="sm" onClick={clearFilters}>
                   <X className="h-4 w-4 mr-1" />
-                  Limpar
+                  <span className="hidden sm:inline">Limpar</span>
                 </Button>
               )}
             </div>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-4">
+            <div className="grid gap-3 sm:flex sm:flex-wrap sm:gap-4 sm:items-center">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Buscar por código ou mensagem"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 w-[280px]"
+                  className="pl-9 w-full sm:w-[280px]"
                 />
               </div>
 
               <Select value={moduleFilter} onValueChange={setModuleFilter}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <SelectValue placeholder="Módulo" />
                 </SelectTrigger>
                 <SelectContent>
@@ -256,7 +256,7 @@ export default function RegrasPage() {
               </Select>
 
               <Select value={levelFilter} onValueChange={setLevelFilter}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <SelectValue placeholder="Nível" />
                 </SelectTrigger>
                 <SelectContent>
@@ -280,10 +280,10 @@ export default function RegrasPage() {
           </CardContent>
         </Card>
 
-        {/* Rules Table */}
+        {/* Rules */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <CardTitle>Regras Cadastradas</CardTitle>
                 <CardDescription>
@@ -292,12 +292,15 @@ export default function RegrasPage() {
               </div>
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button onClick={() => handleOpenDialog()}>
-                    <Plus className=" h-4 w-4" />
+                  <Button
+                    onClick={() => handleOpenDialog()}
+                    className="w-full sm:w-auto"
+                  >
+                    <Plus className="h-4 w-4" />
                     Nova Regra
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[600px]">
+                <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
                   <form onSubmit={handleSubmit}>
                     <DialogHeader>
                       <DialogTitle>
@@ -313,7 +316,7 @@ export default function RegrasPage() {
                     </DialogHeader>
 
                     <div className="grid gap-4 py-4">
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="code">Código *</Label>
                           <Input
@@ -363,7 +366,7 @@ export default function RegrasPage() {
                         />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="operator">Operador *</Label>
                           <Select
@@ -452,18 +455,23 @@ export default function RegrasPage() {
                       </div>
                     </div>
 
-                    <DialogFooter>
+                    <DialogFooter className="flex-col sm:flex-row gap-2">
                       <Button
                         type="button"
                         variant="outline"
                         onClick={() => setIsDialogOpen(false)}
                         disabled={isSubmitting}
+                        className="w-full sm:w-auto"
                       >
                         Cancelar
                       </Button>
-                      <Button type="submit" disabled={isSubmitting}>
+                      <Button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="w-full sm:w-auto"
+                      >
                         {isSubmitting && (
-                          <Loader2 className=" h-4 w-4 animate-spin" />
+                          <Loader2 className="h-4 w-4 animate-spin" />
                         )}
                         {editingRule ? 'Salvar' : 'Criar'}
                       </Button>
@@ -484,76 +492,125 @@ export default function RegrasPage() {
               <div className="text-center py-8 text-destructive">
                 <p>Erro ao carregar regras. Tente novamente.</p>
               </div>
+            ) : filteredRules.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-8 text-muted-foreground">
+                <ShieldCheck className="h-8 w-8" />
+                <p>Nenhuma regra encontrada</p>
+              </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Código</TableHead>
-                    <TableHead>Módulo</TableHead>
-                    <TableHead>Campo</TableHead>
-                    <TableHead>Operador</TableHead>
-                    <TableHead>Valor</TableHead>
-                    <TableHead>Nível</TableHead>
-                    <TableHead>Ativa</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredRules.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={8} className="h-24 text-center">
-                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                          <ShieldCheck className="h-8 w-8" />
-                          <p>Nenhuma regra encontrada</p>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredRules.map((rule) => (
-                      <TableRow key={rule.id}>
-                        <TableCell>
-                          <code className="text-xs bg-muted px-2 py-1 rounded font-medium">
-                            {rule.code}
-                          </code>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {moduleLabels[rule.module]}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {rule.field}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {operatorLabels[rule.operator]}
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {rule.value || '—'}
-                        </TableCell>
-                        <TableCell>
-                          <ValidationLevelBadge level={rule.level} />
-                        </TableCell>
-                        <TableCell>
-                          <Switch
-                            checked={rule.active}
-                            onCheckedChange={() => handleToggleActive(rule)}
-                            disabled={toggleActive.isPending}
-                          />
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleOpenDialog(rule)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
+              <>
+                {/* Desktop Table */}
+                <div className="hidden lg:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Código</TableHead>
+                        <TableHead>Módulo</TableHead>
+                        <TableHead>Campo</TableHead>
+                        <TableHead>Operador</TableHead>
+                        <TableHead>Valor</TableHead>
+                        <TableHead>Nível</TableHead>
+                        <TableHead>Ativa</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredRules.map((rule) => (
+                        <TableRow key={rule.id}>
+                          <TableCell>
+                            <code className="text-xs bg-muted px-2 py-1 rounded font-medium">
+                              {rule.code}
+                            </code>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {moduleLabels[rule.module]}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-mono text-sm">
+                            {rule.field}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {operatorLabels[rule.operator]}
+                          </TableCell>
+                          <TableCell className="font-mono text-sm">
+                            {rule.value || '—'}
+                          </TableCell>
+                          <TableCell>
+                            <ValidationLevelBadge level={rule.level} />
+                          </TableCell>
+                          <TableCell>
+                            <Switch
+                              checked={rule.active}
+                              onCheckedChange={() => handleToggleActive(rule)}
+                              disabled={toggleActive.isPending}
+                            />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleOpenDialog(rule)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Mobile/Tablet Cards */}
+                <div className="lg:hidden space-y-3">
+                  {filteredRules.map((rule) => (
+                    <Card
+                      key={rule.id}
+                      className="cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => handleOpenDialog(rule)}
+                    >
+                      <CardContent className="p-4 space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <code className="text-xs bg-muted px-2 py-1 rounded font-medium">
+                              {rule.code}
+                            </code>
+                            <ValidationLevelBadge level={rule.level} />
+                          </div>
+                          <div
+                            className="flex items-center gap-2"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Switch
+                              checked={rule.active}
+                              onCheckedChange={() => handleToggleActive(rule)}
+                              disabled={toggleActive.isPending}
+                            />
+                          </div>
+                        </div>
+                        <div className="text-sm space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="outline">
+                              {moduleLabels[rule.module]}
+                            </Badge>
+                            <span className="text-muted-foreground">•</span>
+                            <span className="font-mono text-muted-foreground">
+                              {rule.field}
+                            </span>
+                          </div>
+                          <p className="text-muted-foreground">
+                            {operatorLabels[rule.operator]}{' '}
+                            {rule.value && `"${rule.value}"`}
+                          </p>
+                          <p className="text-muted-foreground text-xs line-clamp-2">
+                            {rule.message}
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

@@ -175,13 +175,13 @@ export default function DashboardPage() {
         description="Acompanhe remessas, validações e transmissões para o TCE/MS"
       />
 
-      <div className="space-y-6 p-6">
+      <div className="space-y-4 sm:space-y-6 p-4 sm:p-6 overflow-x-hidden">
         {/* KPI Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
           {isStatsLoading ? (
             <>
               {[...Array(4)].map((_, i) => (
-                <Skeleton key={i} className="h-32 w-full" />
+                <Skeleton key={i} className="h-28 sm:h-32 w-full" />
               ))}
             </>
           ) : (
@@ -225,8 +225,8 @@ export default function DashboardPage() {
         </div>
 
         {/* Filters */}
-        <Card>
-          <CardHeader className="pb-4">
+        <Card className="gap-0">
+          <CardHeader className="pb-3 sm:pb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-muted-foreground" />
@@ -235,15 +235,16 @@ export default function DashboardPage() {
               {hasFilters && (
                 <Button variant="ghost" size="sm" onClick={clearFilters}>
                   <X className="h-4 w-4 mr-1" />
-                  Limpar filtros
+                  <span className="hidden sm:inline">Limpar filtros</span>
+                  <span className="sm:hidden">Limpar</span>
                 </Button>
               )}
             </div>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-4">
+            <div className="grid gap-3 sm:flex sm:flex-wrap sm:gap-4">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -257,7 +258,7 @@ export default function DashboardPage() {
               </Select>
 
               <Select value={moduleFilter} onValueChange={setModuleFilter}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <SelectValue placeholder="Módulo" />
                 </SelectTrigger>
                 <SelectContent>
@@ -274,13 +275,13 @@ export default function DashboardPage() {
                 placeholder="Competência (ex: 2024-12)"
                 value={competencyFilter}
                 onChange={(e) => setCompetencyFilter(e.target.value)}
-                className="w-[180px]"
+                className="w-full sm:w-[180px]"
               />
             </div>
           </CardContent>
         </Card>
 
-        {/* Remittances Table */}
+        {/* Remittances */}
         <Card>
           <CardHeader>
             <CardTitle>Remessas</CardTitle>
@@ -299,110 +300,216 @@ export default function DashboardPage() {
               <div className="text-center py-8 text-destructive">
                 <p>Erro ao carregar remessas. Tente novamente.</p>
               </div>
+            ) : remittances.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-8 text-muted-foreground">
+                <Package className="h-8 w-8" />
+                <p>Nenhuma remessa encontrada</p>
+              </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Unidade</TableHead>
-                    <TableHead>Módulo</TableHead>
-                    <TableHead>Competência</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Protocolo</TableHead>
-                    <TableHead>Criado em</TableHead>
-                    <TableHead>Enviado em</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {remittances.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={9} className="h-24 text-center">
-                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                          <Package className="h-8 w-8" />
-                          <p>Nenhuma remessa encontrada</p>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    remittances.map((remittance) => (
-                      <TableRow key={remittance.id}>
-                        <TableCell className="font-medium">
-                          #{remittance.id}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <span className="font-medium">
-                              {remittance.unit?.code}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {remittance.unit?.name}
-                            </span>
+              <>
+                {/* Desktop Table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Unidade</TableHead>
+                        <TableHead>Módulo</TableHead>
+                        <TableHead>Competência</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Protocolo</TableHead>
+                        <TableHead>Criado em</TableHead>
+                        <TableHead>Enviado em</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {remittances.map((remittance) => (
+                        <TableRow key={remittance.id}>
+                          <TableCell className="font-medium">
+                            #{remittance.id}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="font-medium">
+                                {remittance.unit?.code}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {remittance.unit?.name}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {moduleLabels[remittance.module]}
+                          </TableCell>
+                          <TableCell>{remittance.competency}</TableCell>
+                          <TableCell>
+                            <StatusBadge status={remittance.status} />
+                          </TableCell>
+                          <TableCell>
+                            {remittance.protocol ? (
+                              <code className="text-xs bg-muted px-2 py-1 rounded">
+                                {remittance.protocol}
+                              </code>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {format(
+                              new Date(remittance.createdAt),
+                              'dd/MM/yyyy HH:mm',
+                              {
+                                locale: ptBR,
+                              }
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {remittance.sentAt
+                              ? format(
+                                  new Date(remittance.sentAt),
+                                  'dd/MM/yyyy HH:mm',
+                                  {
+                                    locale: ptBR,
+                                  }
+                                )
+                              : '—'}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => handleViewDetails(remittance)}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                  Ver detalhes
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                {remittance.status === 'READY' && (
+                                  <DropdownMenuItem
+                                    onClick={() => handleSend(remittance)}
+                                  >
+                                    <Send className="h-4 w-4" />
+                                    Enviar para TCE
+                                  </DropdownMenuItem>
+                                )}
+                                {(remittance.status === 'ERROR' ||
+                                  remittance.status === 'SENT') && (
+                                  <DropdownMenuItem
+                                    onClick={() => handleRetry(remittance)}
+                                  >
+                                    <RefreshCw className="h-4 w-4" />
+                                    Reenviar
+                                  </DropdownMenuItem>
+                                )}
+                                {['PENDING', 'READY', 'SENDING'].includes(
+                                  remittance.status
+                                ) && (
+                                  <DropdownMenuItem
+                                    onClick={() => handleCancel(remittance)}
+                                    className="text-destructive"
+                                  >
+                                    <XCircle className="h-4 w-4" />
+                                    Cancelar
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Mobile Cards */}
+                <div className="md:hidden space-y-3">
+                  {remittances.map((remittance) => (
+                    <Card
+                      key={remittance.id}
+                      className="cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => handleViewDetails(remittance)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0 space-y-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-semibold">
+                                #{remittance.id}
+                              </span>
+                              <StatusBadge status={remittance.status} />
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              <p className="font-medium text-foreground truncate">
+                                {remittance.unit?.code} -{' '}
+                                {remittance.unit?.name}
+                              </p>
+                              <p>{moduleLabels[remittance.module]}</p>
+                              <p>Competência: {remittance.competency}</p>
+                            </div>
+                            {remittance.protocol && (
+                              <code className="text-xs bg-muted px-2 py-1 rounded inline-block">
+                                {remittance.protocol}
+                              </code>
+                            )}
+                            <p className="text-xs text-muted-foreground">
+                              Criado em{' '}
+                              {format(
+                                new Date(remittance.createdAt),
+                                "dd/MM/yyyy 'às' HH:mm",
+                                { locale: ptBR }
+                              )}
+                            </p>
                           </div>
-                        </TableCell>
-                        <TableCell>{moduleLabels[remittance.module]}</TableCell>
-                        <TableCell>{remittance.competency}</TableCell>
-                        <TableCell>
-                          <StatusBadge status={remittance.status} />
-                        </TableCell>
-                        <TableCell>
-                          {remittance.protocol ? (
-                            <code className="text-xs bg-muted px-2 py-1 rounded">
-                              {remittance.protocol}
-                            </code>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {format(
-                            new Date(remittance.createdAt),
-                            'dd/MM/yyyy HH:mm',
-                            {
-                              locale: ptBR,
-                            }
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {remittance.sentAt
-                            ? format(
-                                new Date(remittance.sentAt),
-                                'dd/MM/yyyy HH:mm',
-                                {
-                                  locale: ptBR,
-                                }
-                              )
-                            : '—'}
-                        </TableCell>
-                        <TableCell className="text-right">
                           <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
+                            <DropdownMenuTrigger
+                              asChild
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="shrink-0"
+                              >
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
-                                onClick={() => handleViewDetails(remittance)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleViewDetails(remittance);
+                                }}
                               >
-                                <Eye className=" h-4 w-4" />
+                                <Eye className="h-4 w-4" />
                                 Ver detalhes
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               {remittance.status === 'READY' && (
                                 <DropdownMenuItem
-                                  onClick={() => handleSend(remittance)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSend(remittance);
+                                  }}
                                 >
-                                  <Send className=" h-4 w-4" />
+                                  <Send className="h-4 w-4" />
                                   Enviar para TCE
                                 </DropdownMenuItem>
                               )}
                               {(remittance.status === 'ERROR' ||
                                 remittance.status === 'SENT') && (
                                 <DropdownMenuItem
-                                  onClick={() => handleRetry(remittance)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRetry(remittance);
+                                  }}
                                 >
-                                  <RefreshCw className=" h-4 w-4" />
+                                  <RefreshCw className="h-4 w-4" />
                                   Reenviar
                                 </DropdownMenuItem>
                               )}
@@ -410,35 +517,38 @@ export default function DashboardPage() {
                                 remittance.status
                               ) && (
                                 <DropdownMenuItem
-                                  onClick={() => handleCancel(remittance)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCancel(remittance);
+                                  }}
                                   className="text-destructive"
                                 >
-                                  <XCircle className=" h-4 w-4" />
+                                  <XCircle className="h-4 w-4" />
                                   Cancelar
                                 </DropdownMenuItem>
                               )}
                             </DropdownMenuContent>
                           </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
 
         {/* Status Distribution */}
         {!isStatsLoading && stats && (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
+          <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
             {statusOptions.map((option) => (
-              <Card key={option.value} className="p-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
+              <Card key={option.value} className="p-3 sm:p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs sm:text-sm text-muted-foreground truncate">
                     {option.label}
                   </span>
-                  <span className="text-2xl font-bold">
+                  <span className="text-xl sm:text-2xl font-bold">
                     {stats.byStatus[option.value] || 0}
                   </span>
                 </div>
@@ -450,14 +560,14 @@ export default function DashboardPage() {
 
       {/* Details Drawer */}
       <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-        <SheetContent className="sm:max-w-2xl overflow-hidden flex flex-col">
+        <SheetContent className="w-full sm:max-w-xl lg:max-w-2xl overflow-hidden flex flex-col">
           <SheetHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <SheetTitle className="text-xl">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <SheetTitle className="text-lg sm:text-xl">
                   Remessa #{selectedRemittance?.id}
                 </SheetTitle>
-                <SheetDescription>
+                <SheetDescription className="truncate">
                   {selectedRemittance?.module &&
                     moduleLabels[selectedRemittance.module]}{' '}
                   - {selectedRemittance?.competency}
@@ -471,44 +581,52 @@ export default function DashboardPage() {
 
           <Tabs defaultValue="overview" className="flex-1 flex flex-col mt-4">
             <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-              <TabsTrigger value="payload">Payload</TabsTrigger>
-              <TabsTrigger value="validations">Validações</TabsTrigger>
-              <TabsTrigger value="logs">Logs</TabsTrigger>
+              <TabsTrigger value="overview" className="text-xs sm:text-sm">
+                Geral
+              </TabsTrigger>
+              <TabsTrigger value="payload" className="text-xs sm:text-sm">
+                Payload
+              </TabsTrigger>
+              <TabsTrigger value="validations" className="text-xs sm:text-sm">
+                Validações
+              </TabsTrigger>
+              <TabsTrigger value="logs" className="text-xs sm:text-sm">
+                Logs
+              </TabsTrigger>
             </TabsList>
 
             <ScrollArea className="flex-1 mt-4">
               <TabsContent value="overview" className="m-0 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Unidade</p>
-                    <p className="font-medium">
+                    <p className="font-medium text-sm sm:text-base">
                       {selectedRemittance?.unit?.code} -{' '}
                       {selectedRemittance?.unit?.name}
                     </p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Módulo</p>
-                    <p className="font-medium">
+                    <p className="font-medium text-sm sm:text-base">
                       {selectedRemittance?.module &&
                         moduleLabels[selectedRemittance.module]}
                     </p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Competência</p>
-                    <p className="font-medium">
+                    <p className="font-medium text-sm sm:text-base">
                       {selectedRemittance?.competency}
                     </p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Protocolo</p>
-                    <p className="font-medium">
+                    <p className="font-medium text-sm sm:text-base">
                       {selectedRemittance?.protocol || '—'}
                     </p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Criado em</p>
-                    <p className="font-medium">
+                    <p className="font-medium text-sm sm:text-base">
                       {selectedRemittance?.createdAt &&
                         format(
                           new Date(selectedRemittance.createdAt),
@@ -519,7 +637,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Enviado em</p>
-                    <p className="font-medium">
+                    <p className="font-medium text-sm sm:text-base">
                       {selectedRemittance?.sentAt
                         ? format(
                             new Date(selectedRemittance.sentAt),
@@ -532,7 +650,7 @@ export default function DashboardPage() {
                 </div>
 
                 {selectedRemittance?.errorMsg && (
-                  <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20">
+                  <div className="p-3 sm:p-4 rounded-lg bg-destructive/10 border border-destructive/20">
                     <p className="text-sm font-medium text-destructive">
                       Mensagem de Erro
                     </p>
@@ -569,9 +687,12 @@ export default function DashboardPage() {
                       const isError = selectedRemittance?.status === 'ERROR';
 
                       return (
-                        <div key={status} className="flex items-center gap-2">
+                        <div
+                          key={status}
+                          className="flex items-center gap-1 sm:gap-2"
+                        >
                           <div
-                            className={`w-3 h-3 rounded-full ${
+                            className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full ${
                               isError && index === currentIndex
                                 ? 'bg-red-500'
                                 : isCompleted
@@ -580,7 +701,7 @@ export default function DashboardPage() {
                             }`}
                           />
                           <span
-                            className={`text-xs ${
+                            className={`text-[10px] sm:text-xs ${
                               isCompleted
                                 ? 'text-foreground'
                                 : 'text-muted-foreground'
@@ -589,7 +710,7 @@ export default function DashboardPage() {
                             {statusTimelineLabels[status] || status}
                           </span>
                           {index < 5 && (
-                            <ArrowUpRight className="h-3 w-3 text-muted-foreground rotate-45" />
+                            <ArrowUpRight className="h-2 w-2 sm:h-3 sm:w-3 text-muted-foreground rotate-45" />
                           )}
                         </div>
                       );
@@ -598,18 +719,20 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-2 pt-4">
+                <div className="flex flex-wrap gap-2 pt-4">
                   {selectedRemittance?.status === 'READY' && (
                     <Button
                       onClick={() => handleSend(selectedRemittance)}
                       disabled={sendRemittance.isPending}
+                      className="flex-1 sm:flex-none"
                     >
                       {sendRemittance.isPending ? (
-                        <Loader2 className=" h-4 w-4 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
-                        <Send className=" h-4 w-4" />
+                        <Send className="h-4 w-4" />
                       )}
-                      Enviar para TCE
+                      <span className="hidden sm:inline">Enviar para TCE</span>
+                      <span className="sm:hidden">Enviar</span>
                     </Button>
                   )}
                   {(selectedRemittance?.status === 'ERROR' ||
@@ -620,11 +743,12 @@ export default function DashboardPage() {
                         selectedRemittance && handleRetry(selectedRemittance)
                       }
                       disabled={retryRemittance.isPending}
+                      className="flex-1 sm:flex-none"
                     >
                       {retryRemittance.isPending ? (
-                        <Loader2 className=" h-4 w-4 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
-                        <RefreshCw className=" h-4 w-4" />
+                        <RefreshCw className="h-4 w-4" />
                       )}
                       Reenviar
                     </Button>
@@ -638,11 +762,12 @@ export default function DashboardPage() {
                         selectedRemittance && handleCancel(selectedRemittance)
                       }
                       disabled={cancelRemittance.isPending}
+                      className="flex-1 sm:flex-none"
                     >
                       {cancelRemittance.isPending ? (
-                        <Loader2 className=" h-4 w-4 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
-                        <XCircle className=" h-4 w-4" />
+                        <XCircle className="h-4 w-4" />
                       )}
                       Cancelar
                     </Button>
@@ -669,8 +794,8 @@ export default function DashboardPage() {
                         toast.success('JSON copiado!');
                       }}
                     >
-                      <Copy className=" h-4 w-4" />
-                      Copiar JSON
+                      <Copy className="h-4 w-4" />
+                      <span className="hidden sm:inline ml-1">Copiar JSON</span>
                     </Button>
                   </div>
                   <JsonViewer data={selectedRemittance?.payload || {}} />
@@ -697,10 +822,10 @@ export default function DashboardPage() {
                     remittanceLogs.map((log) => (
                       <div
                         key={log.id}
-                        className="p-4 rounded-lg border bg-card space-y-3"
+                        className="p-3 sm:p-4 rounded-lg border bg-card space-y-3"
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <Badge
                               variant="outline"
                               className={
@@ -711,7 +836,7 @@ export default function DashboardPage() {
                             >
                               {log.direction}
                             </Badge>
-                            <code className="text-xs bg-muted px-2 py-1 rounded">
+                            <code className="text-xs bg-muted px-2 py-1 rounded break-all">
                               {log.method} {log.url}
                             </code>
                           </div>

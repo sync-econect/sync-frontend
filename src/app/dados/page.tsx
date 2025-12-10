@@ -149,7 +149,7 @@ export default function DadosPage() {
 
       <div className="space-y-6 p-6">
         {/* Filters */}
-        <Card>
+        <Card className="gap-0">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">

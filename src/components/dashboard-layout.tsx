@@ -9,13 +9,13 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen w-full overflow-x-hidden">
       <Sidebar />
-      <div className="ml-64 flex-1 flex flex-col">
+      {/* Main content - adjust margin for desktop sidebar */}
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-64">
         <Topbar />
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 overflow-x-hidden">{children}</main>
       </div>
     </div>
   );
 }
-

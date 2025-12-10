@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { PageHeader } from '@/components/page-header';
-import { StatusBadge, ValidationLevelBadge } from '@/components/status-badge';
+import { StatusBadge } from '@/components/status-badge';
 import { JsonViewer } from '@/components/json-viewer';
 import {
   Card,
@@ -230,10 +230,10 @@ export default function RemessasPage() {
         description="Gerencie todas as remessas do sistema"
       />
 
-      <div className="space-y-6 p-6">
+      <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
         {/* Filters */}
-        <Card>
-          <CardHeader className="pb-4">
+        <Card className="gap-0">
+          <CardHeader className="pb-3 sm:pb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-muted-foreground" />
@@ -242,15 +242,15 @@ export default function RemessasPage() {
               {hasFilters && (
                 <Button variant="ghost" size="sm" onClick={clearFilters}>
                   <X className="h-4 w-4 mr-1" />
-                  Limpar
+                  <span className="hidden sm:inline">Limpar</span>
                 </Button>
               )}
             </div>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-4">
+            <div className="grid gap-3 sm:flex sm:flex-wrap sm:gap-4">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -264,7 +264,7 @@ export default function RemessasPage() {
               </Select>
 
               <Select value={moduleFilter} onValueChange={setModuleFilter}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <SelectValue placeholder="Módulo" />
                 </SelectTrigger>
                 <SelectContent>
@@ -281,7 +281,7 @@ export default function RemessasPage() {
                 placeholder="Competência"
                 value={competencyFilter}
                 onChange={(e) => setCompetencyFilter(e.target.value)}
-                className="w-[160px]"
+                className="w-full sm:w-[160px]"
               />
             </div>
           </CardContent>
@@ -290,28 +290,29 @@ export default function RemessasPage() {
         {/* Actions Bar */}
         {selectedItems.length > 0 && (
           <Card className="border-primary/50 bg-primary/5">
-            <CardContent className="py-3">
-              <div className="flex items-center justify-between">
+            <CardContent className="py-3 px-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <span className="text-sm font-medium">
                   {selectedItems.length} item(s) selecionado(s)
                 </span>
-                <div className="flex gap-2">
+                <div className="flex gap-2 w-full sm:w-auto">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={handleBulkResend}
+                    className="flex-1 sm:flex-none"
                   >
-                    <RefreshCw className=" h-4 w-4" />
-                    Reenviar selecionadas
+                    <RefreshCw className="h-4 w-4" />
+                    <span className="hidden sm:inline ml-1">Reenviar</span>
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={handleBulkCancel}
-                    className="text-destructive"
+                    className="text-destructive flex-1 sm:flex-none"
                   >
-                    <XCircle className=" h-4 w-4" />
-                    Cancelar selecionadas
+                    <XCircle className="h-4 w-4" />
+                    <span className="hidden sm:inline ml-1">Cancelar</span>
                   </Button>
                 </div>
               </div>
@@ -319,18 +320,21 @@ export default function RemessasPage() {
           </Card>
         )}
 
-        {/* Remittances Table */}
+        {/* Remittances */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <CardTitle>Remessas</CardTitle>
                 <CardDescription>
                   {remittancesData?.total || 0} remessa(s) encontrada(s)
                 </CardDescription>
               </div>
-              <Button onClick={() => setIsCreateDialogOpen(true)}>
-                <Plus className=" h-4 w-4" />
+              <Button
+                onClick={() => setIsCreateDialogOpen(true)}
+                className="w-full sm:w-auto"
+              >
+                <Plus className="h-4 w-4" />
                 Criar Remessa
               </Button>
             </div>
@@ -346,115 +350,229 @@ export default function RemessasPage() {
               <div className="text-center py-8 text-destructive">
                 <p>Erro ao carregar remessas. Tente novamente.</p>
               </div>
+            ) : remittances.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-8 text-muted-foreground">
+                <Package className="h-8 w-8" />
+                <p>Nenhuma remessa encontrada</p>
+              </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[50px]">
-                      <Checkbox
-                        checked={
-                          selectedItems.length === remittances.length &&
-                          remittances.length > 0
-                        }
-                        onCheckedChange={toggleSelectAll}
-                      />
-                    </TableHead>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Unidade</TableHead>
-                    <TableHead>Módulo</TableHead>
-                    <TableHead>Competência</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Protocolo</TableHead>
-                    <TableHead>Criado em</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {remittances.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={9} className="h-24 text-center">
-                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                          <Package className="h-8 w-8" />
-                          <p>Nenhuma remessa encontrada</p>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    remittances.map((remittance) => (
-                      <TableRow key={remittance.id}>
-                        <TableCell>
+              <>
+                {/* Desktop Table */}
+                <div className="hidden lg:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[50px]">
+                          <Checkbox
+                            checked={
+                              selectedItems.length === remittances.length &&
+                              remittances.length > 0
+                            }
+                            onCheckedChange={toggleSelectAll}
+                          />
+                        </TableHead>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Unidade</TableHead>
+                        <TableHead>Módulo</TableHead>
+                        <TableHead>Competência</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Protocolo</TableHead>
+                        <TableHead>Criado em</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {remittances.map((remittance) => (
+                        <TableRow key={remittance.id}>
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedItems.includes(remittance.id)}
+                              onCheckedChange={() =>
+                                toggleSelectItem(remittance.id)
+                              }
+                            />
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            #{remittance.id}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="font-medium">
+                                {remittance.unit?.code}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {remittance.unit?.name}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {moduleLabels[remittance.module]}
+                          </TableCell>
+                          <TableCell>{remittance.competency}</TableCell>
+                          <TableCell>
+                            <StatusBadge status={remittance.status} />
+                          </TableCell>
+                          <TableCell>
+                            {remittance.protocol ? (
+                              <code className="text-xs bg-muted px-2 py-1 rounded">
+                                {remittance.protocol}
+                              </code>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {format(
+                              new Date(remittance.createdAt),
+                              'dd/MM/yyyy HH:mm',
+                              {
+                                locale: ptBR,
+                              }
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => handleViewDetails(remittance)}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                  Ver detalhes
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                {remittance.status === 'READY' && (
+                                  <DropdownMenuItem
+                                    onClick={() => handleSend(remittance)}
+                                  >
+                                    <Send className="h-4 w-4" />
+                                    Enviar para TCE
+                                  </DropdownMenuItem>
+                                )}
+                                {(remittance.status === 'ERROR' ||
+                                  remittance.status === 'SENT') && (
+                                  <DropdownMenuItem
+                                    onClick={() => handleRetry(remittance)}
+                                  >
+                                    <RefreshCw className="h-4 w-4" />
+                                    Reenviar
+                                  </DropdownMenuItem>
+                                )}
+                                {['PENDING', 'READY', 'SENDING'].includes(
+                                  remittance.status
+                                ) && (
+                                  <DropdownMenuItem
+                                    onClick={() => handleCancel(remittance)}
+                                    className="text-destructive"
+                                  >
+                                    <XCircle className="h-4 w-4" />
+                                    Cancelar
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Mobile/Tablet Cards */}
+                <div className="lg:hidden space-y-3">
+                  {remittances.map((remittance) => (
+                    <Card
+                      key={remittance.id}
+                      className="cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => handleViewDetails(remittance)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
                           <Checkbox
                             checked={selectedItems.includes(remittance.id)}
                             onCheckedChange={() =>
                               toggleSelectItem(remittance.id)
                             }
+                            onClick={(e) => e.stopPropagation()}
+                            className="mt-1"
                           />
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          #{remittance.id}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <span className="font-medium">
-                              {remittance.unit?.code}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {remittance.unit?.name}
-                            </span>
+                          <div className="flex-1 min-w-0 space-y-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-semibold">
+                                #{remittance.id}
+                              </span>
+                              <StatusBadge status={remittance.status} />
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              <p className="font-medium text-foreground truncate">
+                                {remittance.unit?.code} -{' '}
+                                {remittance.unit?.name}
+                              </p>
+                              <p>{moduleLabels[remittance.module]}</p>
+                              <p>Competência: {remittance.competency}</p>
+                            </div>
+                            {remittance.protocol && (
+                              <code className="text-xs bg-muted px-2 py-1 rounded inline-block">
+                                {remittance.protocol}
+                              </code>
+                            )}
+                            <p className="text-xs text-muted-foreground">
+                              Criado em{' '}
+                              {format(
+                                new Date(remittance.createdAt),
+                                "dd/MM/yyyy 'às' HH:mm",
+                                { locale: ptBR }
+                              )}
+                            </p>
                           </div>
-                        </TableCell>
-                        <TableCell>{moduleLabels[remittance.module]}</TableCell>
-                        <TableCell>{remittance.competency}</TableCell>
-                        <TableCell>
-                          <StatusBadge status={remittance.status} />
-                        </TableCell>
-                        <TableCell>
-                          {remittance.protocol ? (
-                            <code className="text-xs bg-muted px-2 py-1 rounded">
-                              {remittance.protocol}
-                            </code>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {format(
-                            new Date(remittance.createdAt),
-                            'dd/MM/yyyy HH:mm',
-                            {
-                              locale: ptBR,
-                            }
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
                           <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
+                            <DropdownMenuTrigger
+                              asChild
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="shrink-0"
+                              >
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
-                                onClick={() => handleViewDetails(remittance)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleViewDetails(remittance);
+                                }}
                               >
-                                <Eye className=" h-4 w-4" />
+                                <Eye className="h-4 w-4" />
                                 Ver detalhes
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               {remittance.status === 'READY' && (
                                 <DropdownMenuItem
-                                  onClick={() => handleSend(remittance)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSend(remittance);
+                                  }}
                                 >
-                                  <Send className=" h-4 w-4" />
+                                  <Send className="h-4 w-4" />
                                   Enviar para TCE
                                 </DropdownMenuItem>
                               )}
                               {(remittance.status === 'ERROR' ||
                                 remittance.status === 'SENT') && (
                                 <DropdownMenuItem
-                                  onClick={() => handleRetry(remittance)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRetry(remittance);
+                                  }}
                                 >
-                                  <RefreshCw className=" h-4 w-4" />
+                                  <RefreshCw className="h-4 w-4" />
                                   Reenviar
                                 </DropdownMenuItem>
                               )}
@@ -462,21 +580,24 @@ export default function RemessasPage() {
                                 remittance.status
                               ) && (
                                 <DropdownMenuItem
-                                  onClick={() => handleCancel(remittance)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCancel(remittance);
+                                  }}
                                   className="text-destructive"
                                 >
-                                  <XCircle className=" h-4 w-4" />
+                                  <XCircle className="h-4 w-4" />
                                   Cancelar
                                 </DropdownMenuItem>
                               )}
                             </DropdownMenuContent>
                           </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
@@ -484,7 +605,7 @@ export default function RemessasPage() {
 
       {/* Create Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Criar Remessa Manualmente</DialogTitle>
             <DialogDescription>
@@ -510,19 +631,21 @@ export default function RemessasPage() {
             </Select>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button
               variant="outline"
               onClick={() => setIsCreateDialogOpen(false)}
+              className="w-full sm:w-auto"
             >
               Cancelar
             </Button>
             <Button
               onClick={handleCreateRemittance}
               disabled={createRemittance.isPending}
+              className="w-full sm:w-auto"
             >
               {createRemittance.isPending && (
-                <Loader2 className=" h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
               )}
               Criar Remessa
             </Button>
@@ -532,14 +655,14 @@ export default function RemessasPage() {
 
       {/* Details Drawer */}
       <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-        <SheetContent className="sm:max-w-2xl overflow-hidden flex flex-col">
+        <SheetContent className="w-full sm:max-w-xl lg:max-w-2xl overflow-hidden flex flex-col">
           <SheetHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <SheetTitle className="text-xl">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <SheetTitle className="text-lg sm:text-xl">
                   Remessa #{selectedRemittance?.id}
                 </SheetTitle>
-                <SheetDescription>
+                <SheetDescription className="truncate">
                   {selectedRemittance?.module &&
                     moduleLabels[selectedRemittance.module]}{' '}
                   - {selectedRemittance?.competency}
@@ -553,45 +676,53 @@ export default function RemessasPage() {
 
           <Tabs defaultValue="overview" className="flex-1 flex flex-col mt-4">
             <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-              <TabsTrigger value="payload">Payload</TabsTrigger>
-              <TabsTrigger value="validations">Validações</TabsTrigger>
-              <TabsTrigger value="logs">Logs</TabsTrigger>
+              <TabsTrigger value="overview" className="text-xs sm:text-sm">
+                Geral
+              </TabsTrigger>
+              <TabsTrigger value="payload" className="text-xs sm:text-sm">
+                Payload
+              </TabsTrigger>
+              <TabsTrigger value="validations" className="text-xs sm:text-sm">
+                Validações
+              </TabsTrigger>
+              <TabsTrigger value="logs" className="text-xs sm:text-sm">
+                Logs
+              </TabsTrigger>
             </TabsList>
 
             <ScrollArea className="flex-1 mt-4">
               <TabsContent value="overview" className="m-0 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Unidade</p>
-                    <p className="font-medium">
+                    <p className="font-medium text-sm sm:text-base">
                       {selectedRemittance?.unit?.code} -{' '}
                       {selectedRemittance?.unit?.name}
                     </p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Módulo</p>
-                    <p className="font-medium">
+                    <p className="font-medium text-sm sm:text-base">
                       {selectedRemittance?.module &&
                         moduleLabels[selectedRemittance.module]}
                     </p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Competência</p>
-                    <p className="font-medium">
+                    <p className="font-medium text-sm sm:text-base">
                       {selectedRemittance?.competency}
                     </p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Protocolo</p>
-                    <p className="font-medium">
+                    <p className="font-medium text-sm sm:text-base">
                       {selectedRemittance?.protocol || '—'}
                     </p>
                   </div>
                 </div>
 
                 {selectedRemittance?.errorMsg && (
-                  <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20">
+                  <div className="p-3 sm:p-4 rounded-lg bg-destructive/10 border border-destructive/20">
                     <p className="text-sm font-medium text-destructive">
                       Mensagem de Erro
                     </p>
@@ -603,7 +734,7 @@ export default function RemessasPage() {
 
                 <div className="space-y-2">
                   <p className="text-sm font-medium">Timeline</p>
-                  <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
                     {[
                       'PENDING',
                       'VALIDATING',
@@ -626,14 +757,17 @@ export default function RemessasPage() {
                       const isCompleted = index <= currentIndex;
 
                       return (
-                        <div key={status} className="flex items-center gap-2">
+                        <div
+                          key={status}
+                          className="flex items-center gap-1 sm:gap-2"
+                        >
                           <div
-                            className={`w-3 h-3 rounded-full ${
+                            className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full ${
                               isCompleted ? 'bg-emerald-500' : 'bg-muted'
                             }`}
                           />
                           <span
-                            className={`text-xs ${
+                            className={`text-[10px] sm:text-xs ${
                               isCompleted
                                 ? 'text-foreground'
                                 : 'text-muted-foreground'
@@ -642,7 +776,7 @@ export default function RemessasPage() {
                             {status}
                           </span>
                           {index < 5 && (
-                            <ArrowUpRight className="h-3 w-3 text-muted-foreground rotate-45" />
+                            <ArrowUpRight className="h-2 w-2 sm:h-3 sm:w-3 text-muted-foreground rotate-45" />
                           )}
                         </div>
                       );
@@ -670,8 +804,8 @@ export default function RemessasPage() {
                         toast.success('JSON copiado!');
                       }}
                     >
-                      <Copy className=" h-4 w-4" />
-                      Copiar
+                      <Copy className="h-4 w-4" />
+                      <span className="hidden sm:inline ml-1">Copiar</span>
                     </Button>
                   </div>
                   <JsonViewer data={selectedRemittance?.payload || {}} />
@@ -698,10 +832,10 @@ export default function RemessasPage() {
                     remittanceLogs.map((log) => (
                       <div
                         key={log.id}
-                        className="p-4 rounded-lg border bg-card space-y-3"
+                        className="p-3 sm:p-4 rounded-lg border bg-card space-y-3"
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <Badge
                               variant="outline"
                               className={
@@ -712,7 +846,7 @@ export default function RemessasPage() {
                             >
                               {log.direction}
                             </Badge>
-                            <code className="text-xs bg-muted px-2 py-1 rounded">
+                            <code className="text-xs bg-muted px-2 py-1 rounded break-all">
                               {log.method} {log.url}
                             </code>
                           </div>
@@ -738,18 +872,20 @@ export default function RemessasPage() {
             </ScrollArea>
           </Tabs>
 
-          <div className="flex gap-2 pt-4 border-t mt-4">
+          <div className="flex flex-wrap gap-2 pt-4 border-t mt-4">
             {selectedRemittance?.status === 'READY' && (
               <Button
                 onClick={() => handleSend(selectedRemittance)}
                 disabled={sendRemittance.isPending}
+                className="flex-1 sm:flex-none"
               >
                 {sendRemittance.isPending ? (
-                  <Loader2 className=" h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <Send className=" h-4 w-4" />
+                  <Send className="h-4 w-4" />
                 )}
-                Enviar para TCE
+                <span className="hidden sm:inline">Enviar para TCE</span>
+                <span className="sm:hidden">Enviar</span>
               </Button>
             )}
             {(selectedRemittance?.status === 'ERROR' ||
@@ -760,11 +896,12 @@ export default function RemessasPage() {
                   selectedRemittance && handleRetry(selectedRemittance)
                 }
                 disabled={retryRemittance.isPending}
+                className="flex-1 sm:flex-none"
               >
                 {retryRemittance.isPending ? (
-                  <Loader2 className=" h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <RefreshCw className=" h-4 w-4" />
+                  <RefreshCw className="h-4 w-4" />
                 )}
                 Reenviar
               </Button>
