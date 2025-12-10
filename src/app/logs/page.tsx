@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { PageHeader } from '@/components/page-header';
@@ -75,7 +75,7 @@ const getActionLabel = (
   );
 };
 
-export default function LogsPage() {
+function LogsContent() {
   const searchParams = useSearchParams();
   const initialTab = searchParams.get('tab') || 'auditoria';
 
@@ -386,5 +386,29 @@ export default function LogsPage() {
         </DialogContent>
       </Dialog>
     </DashboardLayout>
+  );
+}
+
+export default function LogsPage() {
+  return (
+    <Suspense
+      fallback={
+        <DashboardLayout>
+          <PageHeader
+            title="Logs do Sistema"
+            description="Visualize logs de comunicação e auditoria"
+          />
+          <div className="p-6">
+            <div className="space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          </div>
+        </DashboardLayout>
+      }
+    >
+      <LogsContent />
+    </Suspense>
   );
 }
