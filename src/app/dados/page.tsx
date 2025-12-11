@@ -59,14 +59,22 @@ import {
   Filter,
   X,
   Loader2,
+  AlertTriangle,
+  RefreshCw,
+  Trash2,
 } from 'lucide-react';
 import { useRawData } from '@/hooks/use-raw-data';
 import { useUnits } from '@/hooks/use-units';
 import { useCreateRemittance } from '@/hooks/use-remittances';
+import {
+  useValidationsByRawData,
+  useValidateRawData,
+  useRevalidateRawData,
+  useClearValidations,
+} from '@/hooks/use-validations';
 import type { RawData, RawDataStatus, ModuleType } from '@/types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { toast } from 'sonner';
 
 const moduleLabels: Record<ModuleType, string> = {
   CONTRATO: 'Contrato',
@@ -107,14 +115,42 @@ export default function DadosPage() {
   const { data: rawData = [], isLoading, isError } = useRawData(apiFilters);
   const { data: units = [] } = useUnits();
   const createRemittance = useCreateRemittance();
+  const validateRawData = useValidateRawData();
+  const revalidateRawData = useRevalidateRawData();
+  const clearValidations = useClearValidations();
+
+  // Validações do dado selecionado
+  const {
+    data: validations = [],
+    isLoading: isLoadingValidations,
+    refetch: refetchValidations,
+  } = useValidationsByRawData(selectedData ? parseInt(selectedData.id) : 0);
 
   const handleViewDetails = (data: RawData) => {
     setSelectedData(data);
     setIsDrawerOpen(true);
   };
 
-  const handleValidate = (data: RawData) => {
-    toast.info(`Validando dados #${data.id}...`);
+  const handleValidate = async (data: RawData) => {
+    await validateRawData.mutateAsync(parseInt(data.id));
+    // Atualizar validações se o drawer está aberto
+    if (selectedData?.id === data.id) {
+      refetchValidations();
+    }
+  };
+
+  const handleRevalidate = async (data: RawData) => {
+    await revalidateRawData.mutateAsync(parseInt(data.id));
+    if (selectedData?.id === data.id) {
+      refetchValidations();
+    }
+  };
+
+  const handleClearValidations = async (data: RawData) => {
+    await clearValidations.mutateAsync(parseInt(data.id));
+    if (selectedData?.id === data.id) {
+      refetchValidations();
+    }
   };
 
   const handleCreateRemittance = async (data: RawData) => {
@@ -139,6 +175,14 @@ export default function DadosPage() {
     moduleFilter !== 'all' ||
     statusFilter !== 'all' ||
     competencyFilter !== '';
+
+  // Contadores de validações
+  const imperativasCount = validations.filter(
+    (v) => v.level === 'IMPEDITIVA'
+  ).length;
+  const alertasCount = validations.filter((v) => v.level === 'ALERTA').length;
+
+  const isValidating = validateRawData.isPending || revalidateRawData.isPending;
 
   return (
     <DashboardLayout>
@@ -305,21 +349,30 @@ export default function DadosPage() {
                               <DropdownMenuItem
                                 onClick={() => handleViewDetails(data)}
                               >
-                                <Eye className=" h-4 w-4" />
+                                <Eye className="h-4 w-4" />
                                 Ver detalhes
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 onClick={() => handleValidate(data)}
+                                disabled={isValidating}
                               >
-                                <CheckCircle2 className=" h-4 w-4" />
+                                <CheckCircle2 className="h-4 w-4" />
                                 Validar agora
                               </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleRevalidate(data)}
+                                disabled={isValidating}
+                              >
+                                <RefreshCw className="h-4 w-4" />
+                                Revalidar
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 onClick={() => handleCreateRemittance(data)}
                                 disabled={createRemittance.isPending}
                               >
-                                <Package className=" h-4 w-4" />
+                                <Package className="h-4 w-4" />
                                 Criar remessa
                               </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -358,7 +411,24 @@ export default function DadosPage() {
           <Tabs defaultValue="payload" className="flex-1 flex flex-col mt-4">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="payload">Payload Original</TabsTrigger>
-              <TabsTrigger value="validations">Validações</TabsTrigger>
+              <TabsTrigger
+                value="validations"
+                className="flex items-center gap-2"
+              >
+                Validações
+                {validations.length > 0 && (
+                  <Badge
+                    variant="outline"
+                    className={
+                      imperativasCount > 0
+                        ? 'bg-red-500/10 text-red-600 border-red-500/20'
+                        : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
+                    }
+                  >
+                    {validations.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
             </TabsList>
 
             <ScrollArea className="flex-1 mt-4">
@@ -370,12 +440,74 @@ export default function DadosPage() {
               </TabsContent>
 
               <TabsContent value="validations" className="m-0">
-                <div className="space-y-3">
+                {isLoadingValidations ? (
+                  <div className="space-y-3">
+                    {[...Array(3)].map((_, i) => (
+                      <Skeleton key={i} className="h-20 w-full" />
+                    ))}
+                  </div>
+                ) : validations.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald-500" />
-                    <p>Nenhuma validação pendente</p>
+                    <p>Nenhuma validação encontrada</p>
+                    <p className="text-sm mt-1">
+                      Clique em &quot;Validar&quot; para verificar os dados
+                    </p>
                   </div>
-                </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Resumo */}
+                    <div className="flex gap-4 p-4 rounded-lg bg-muted/50">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-red-500" />
+                        <span className="text-sm">
+                          <strong>{imperativasCount}</strong> impeditiva(s)
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-amber-500" />
+                        <span className="text-sm">
+                          <strong>{alertasCount}</strong> alerta(s)
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Lista de validações */}
+                    <div className="space-y-3">
+                      {validations.map((validation) => (
+                        <div
+                          key={validation.id}
+                          className="p-4 rounded-lg border bg-card"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <ValidationLevelBadge
+                                  level={validation.level}
+                                />
+                                <code className="text-xs bg-muted px-2 py-1 rounded">
+                                  {validation.code}
+                                </code>
+                              </div>
+                              <p className="text-sm">{validation.message}</p>
+                              {validation.field && (
+                                <p className="text-xs text-muted-foreground">
+                                  Campo: <strong>{validation.field}</strong>
+                                  {validation.value && (
+                                    <>
+                                      {' | '}Valor:{' '}
+                                      <strong>{validation.value}</strong>
+                                    </>
+                                  )}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </TabsContent>
             </ScrollArea>
           </Tabs>
@@ -384,20 +516,59 @@ export default function DadosPage() {
             <Button
               variant="outline"
               onClick={() => selectedData && handleValidate(selectedData)}
+              disabled={isValidating}
             >
-              <CheckCircle2 className=" h-4 w-4" />
+              {isValidating ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle2 className="h-4 w-4" />
+              )}
               Validar
             </Button>
+            <Button
+              variant="outline"
+              onClick={() => selectedData && handleRevalidate(selectedData)}
+              disabled={isValidating}
+            >
+              {isValidating ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              Revalidar
+            </Button>
+            {validations.length > 0 && (
+              <Button
+                variant="outline"
+                onClick={() =>
+                  selectedData && handleClearValidations(selectedData)
+                }
+                disabled={clearValidations.isPending}
+                className="text-destructive hover:text-destructive"
+              >
+                {clearValidations.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+                Limpar
+              </Button>
+            )}
             <Button
               onClick={() =>
                 selectedData && handleCreateRemittance(selectedData)
               }
-              disabled={createRemittance.isPending}
+              disabled={createRemittance.isPending || imperativasCount > 0}
+              title={
+                imperativasCount > 0
+                  ? 'Não é possível criar remessa com erros impeditivos'
+                  : undefined
+              }
             >
               {createRemittance.isPending ? (
-                <Loader2 className=" h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Package className=" h-4 w-4" />
+                <Package className="h-4 w-4" />
               )}
               Criar Remessa
             </Button>
