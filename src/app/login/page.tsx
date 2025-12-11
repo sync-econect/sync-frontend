@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Card,
   CardContent,
@@ -13,29 +15,77 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Logo } from '@/components/logo';
-import { Loader2, Shield } from 'lucide-react';
+import { Loader2, Shield, AlertCircle } from 'lucide-react';
+import { AxiosError } from 'axios';
+
+const loginSchema = z.object({
+  email: z.string().min(1, 'E-mail é obrigatório').email('E-mail inválido'),
+  password: z.string().min(1, 'Senha é obrigatória'),
+});
+
+type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const { login, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+  const form = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  });
 
-    // Simula autenticação para a PoC
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+  useEffect(() => {
+    if (!isAuthLoading && isAuthenticated) {
+      router.push('/');
+    }
+  }, [isAuthenticated, isAuthLoading, router]);
 
-    router.push('/');
+  if (isAuthLoading || isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const isLoading = form.formState.isSubmitting;
+
+  const onSubmit = async (data: LoginFormData) => {
+    setError(null);
+
+    try {
+      await login(data);
+    } catch (err) {
+      if (err instanceof AxiosError) {
+        const message =
+          err.response?.data?.message ||
+          err.response?.data?.error ||
+          'Erro ao fazer login';
+        setError(message);
+      } else {
+        setError('Erro de conexão. Verifique sua internet e tente novamente.');
+      }
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-background via-background to-primary/5 p-4">
       {/* Background pattern */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:24px_24px]" />
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-size-[24px_24px]" />
 
       <Card className="w-full max-w-md relative z-10 border-border/50 shadow-xl">
         <CardHeader className="space-y-4 text-center pb-2">
@@ -55,67 +105,89 @@ export default function LoginPage() {
         </CardHeader>
 
         <CardContent className="pt-4">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="seu.email@exemplo.gov.br"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="h-11"
-                required
-              />
-            </div>
+          {error && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="h-11"
-                required
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>E-mail</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="email"
+                        placeholder="seu.email@econect.ms.gov.br"
+                        className="h-11"
+                        autoComplete="email"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
 
-            <div className="flex items-center space-x-2">
-              <Checkbox id="remember" />
-              <Label
-                htmlFor="remember"
-                className="text-sm font-normal text-muted-foreground cursor-pointer"
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Senha</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder="••••••••"
+                        className="h-11"
+                        autoComplete="current-password"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <Button
+                type="submit"
+                className="w-full h-11 text-base"
+                disabled={isLoading}
               >
-                Lembrar-me neste dispositivo
-              </Label>
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full h-11 text-base"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className=" h-4 w-4 animate-spin" />
-                  Entrando...
-                </>
-              ) : (
-                <>
-                  <Shield className=" h-4 w-4" />
-                  Entrar
-                </>
-              )}
-            </Button>
-          </form>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Entrando...
+                  </>
+                ) : (
+                  <>
+                    <Shield className="h-4 w-4" />
+                    Entrar
+                  </>
+                )}
+              </Button>
+            </form>
+          </Form>
 
           <div className="mt-6 pt-6 border-t border-border">
             <p className="text-xs text-center text-muted-foreground">
-              Ambiente de demonstração (PoC). <br />
-              Qualquer credencial é aceita para fins de teste.
+              Usuários de teste (seed):
             </p>
+            <div className="mt-2 text-xs text-center text-muted-foreground space-y-1">
+              <p>
+                <span className="font-medium">Admin:</span>{' '}
+                admin@econect.ms.gov.br / Admin@123
+              </p>
+              <p>
+                <span className="font-medium">Operador:</span>{' '}
+                operador@econect.ms.gov.br / Operador@123
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>

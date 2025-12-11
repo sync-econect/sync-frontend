@@ -2,6 +2,7 @@ import type React from 'react';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { ReactQueryProvider } from '@/providers/react-query-provider';
+import { AuthProvider } from '@/contexts/auth-context';
 import { SidebarProvider } from '@/contexts/sidebar-context';
 import { Toaster } from '@/components/ui/sonner';
 import './globals.css';
@@ -41,7 +42,9 @@ export default function RootLayout({
     <html lang="pt-BR">
       <body className={`${inter.className} antialiased`}>
         <ReactQueryProvider>
-          <SidebarProvider>{children}</SidebarProvider>
+          <AuthProvider>
+            <SidebarProvider>{children}</SidebarProvider>
+          </AuthProvider>
           <Toaster richColors />
         </ReactQueryProvider>
       </body>
