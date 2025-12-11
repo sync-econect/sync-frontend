@@ -104,6 +104,17 @@ const statusOptions: { value: RemittanceStatus; label: string }[] = [
   { value: 'CANCELLED', label: 'Cancelada' },
 ];
 
+const statusTimelineLabels: Record<string, string> = {
+  PENDING: 'Pendente',
+  VALIDATING: 'Validando',
+  TRANSFORMING: 'Transformando',
+  READY: 'Pronta',
+  SENDING: 'Enviando',
+  SENT: 'Enviada',
+  ERROR: 'Erro',
+  CANCELLED: 'Cancelada',
+};
+
 export default function RemessasPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [moduleFilter, setModuleFilter] = useState<string>('all');
@@ -773,7 +784,7 @@ export default function RemessasPage() {
                                 : 'text-muted-foreground'
                             }`}
                           >
-                            {status}
+                            {statusTimelineLabels[status] || status}
                           </span>
                           {index < 5 && (
                             <ArrowUpRight className="h-2 w-2 sm:h-3 sm:w-3 text-muted-foreground rotate-45" />

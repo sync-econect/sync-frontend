@@ -3,12 +3,19 @@
 import { useState } from 'react';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { PageHeader } from '@/components/page-header';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
@@ -34,8 +41,13 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil, Settings } from 'lucide-react';
-import { mockEndpointConfigs } from '@/lib/mock-data';
+import { Plus, Pencil, Settings, Loader2 } from 'lucide-react';
+import {
+  useEndpointConfigs,
+  useCreateEndpointConfig,
+  useUpdateEndpointConfig,
+  useToggleEndpointConfigActive,
+} from '@/hooks/use-endpoint-configs';
 import type { EndpointConfig, ModuleType } from '@/types';
 import { toast } from 'sonner';
 
@@ -57,9 +69,15 @@ const methodColors: Record<string, string> = {
 };
 
 export default function EndpointsPage() {
-  const [endpoints, setEndpoints] = useState<EndpointConfig[]>(mockEndpointConfigs);
+  const { data: endpoints = [], isLoading, isError } = useEndpointConfigs();
+  const createEndpoint = useCreateEndpointConfig();
+  const updateEndpoint = useUpdateEndpointConfig();
+  const toggleActive = useToggleEndpointConfigActive();
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingEndpoint, setEditingEndpoint] = useState<EndpointConfig | null>(null);
+  const [editingEndpoint, setEditingEndpoint] = useState<EndpointConfig | null>(
+    null
+  );
 
   const [formData, setFormData] = useState({
     module: 'CONTRATO' as ModuleType,
@@ -92,7 +110,7 @@ export default function EndpointsPage() {
     setIsDialogOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.endpoint) {
@@ -100,34 +118,41 @@ export default function EndpointsPage() {
       return;
     }
 
-    if (editingEndpoint) {
-      setEndpoints((prev) =>
-        prev.map((ep) =>
-          ep.id === editingEndpoint.id ? { ...ep, ...formData } : ep
-        )
-      );
-      toast.success('Endpoint atualizado!');
-    } else {
-      const newEndpoint: EndpointConfig = {
-        id: String(Date.now()),
-        ...formData,
-        createdAt: new Date().toISOString(),
-      };
-      setEndpoints((prev) => [...prev, newEndpoint]);
-      toast.success('Endpoint criado!');
+    try {
+      if (editingEndpoint) {
+        await updateEndpoint.mutateAsync({
+          id: parseInt(editingEndpoint.id),
+          payload: {
+            module: formData.module,
+            endpoint: formData.endpoint,
+            method: formData.method,
+            description: formData.description || undefined,
+            active: formData.active,
+          },
+        });
+      } else {
+        await createEndpoint.mutateAsync({
+          module: formData.module,
+          endpoint: formData.endpoint,
+          method: formData.method,
+          description: formData.description || undefined,
+          active: formData.active,
+        });
+      }
+      setIsDialogOpen(false);
+    } catch {
+      // Error is handled in the hook
     }
-
-    setIsDialogOpen(false);
   };
 
   const handleToggleActive = (endpoint: EndpointConfig) => {
-    setEndpoints((prev) =>
-      prev.map((ep) =>
-        ep.id === endpoint.id ? { ...ep, active: !ep.active } : ep
-      )
-    );
-    toast.success(endpoint.active ? 'Endpoint desativado' : 'Endpoint ativado');
+    toggleActive.mutate({
+      id: parseInt(endpoint.id),
+      active: !endpoint.active,
+    });
   };
+
+  const isSubmitting = createEndpoint.isPending || updateEndpoint.isPending;
 
   return (
     <DashboardLayout>
@@ -149,7 +174,7 @@ export default function EndpointsPage() {
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
                   <Button onClick={() => handleOpenDialog()}>
-                    <Plus className=" h-4 w-4" />
+                    <Plus className="h-4 w-4" />
                     Novo Endpoint
                   </Button>
                 </DialogTrigger>
@@ -177,11 +202,13 @@ export default function EndpointsPage() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {Object.entries(moduleLabels).map(([value, label]) => (
-                              <SelectItem key={value} value={value}>
-                                {label}
-                              </SelectItem>
-                            ))}
+                            {Object.entries(moduleLabels).map(
+                              ([value, label]) => (
+                                <SelectItem key={value} value={value}>
+                                  {label}
+                                </SelectItem>
+                              )
+                            )}
                           </SelectContent>
                         </Select>
                       </div>
@@ -226,7 +253,10 @@ export default function EndpointsPage() {
                           id="description"
                           value={formData.description}
                           onChange={(e) =>
-                            setFormData({ ...formData, description: e.target.value })
+                            setFormData({
+                              ...formData,
+                              description: e.target.value,
+                            })
                           }
                           placeholder="Descrição do endpoint"
                         />
@@ -249,10 +279,14 @@ export default function EndpointsPage() {
                         type="button"
                         variant="outline"
                         onClick={() => setIsDialogOpen(false)}
+                        disabled={isSubmitting}
                       >
                         Cancelar
                       </Button>
-                      <Button type="submit">
+                      <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting && (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        )}
                         {editingEndpoint ? 'Salvar' : 'Criar'}
                       </Button>
                     </DialogFooter>
@@ -262,81 +296,95 @@ export default function EndpointsPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Módulo</TableHead>
-                  <TableHead>Endpoint</TableHead>
-                  <TableHead>Método</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Ativo</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {endpoints.length === 0 ? (
+            {isLoading ? (
+              <div className="space-y-3">
+                {[...Array(4)].map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : isError ? (
+              <div className="text-center py-8 text-destructive">
+                <p>Erro ao carregar endpoints. Tente novamente.</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
-                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                        <Settings className="h-8 w-8" />
-                        <p>Nenhum endpoint configurado</p>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleOpenDialog()}
-                        >
-                          <Plus className=" h-4 w-4" />
-                          Configurar primeiro endpoint
-                        </Button>
-                      </div>
-                    </TableCell>
+                    <TableHead>Módulo</TableHead>
+                    <TableHead>Endpoint</TableHead>
+                    <TableHead>Método</TableHead>
+                    <TableHead>Descrição</TableHead>
+                    <TableHead>Ativo</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
-                ) : (
-                  endpoints.map((endpoint) => (
-                    <TableRow key={endpoint.id}>
-                      <TableCell>
-                        <Badge variant="outline">{moduleLabels[endpoint.module]}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <code className="text-sm bg-muted px-2 py-1 rounded">
-                          {endpoint.endpoint}
-                        </code>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={methodColors[endpoint.method] || ''}
-                        >
-                          {endpoint.method}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {endpoint.description || '—'}
-                      </TableCell>
-                      <TableCell>
-                        <Switch
-                          checked={endpoint.active}
-                          onCheckedChange={() => handleToggleActive(endpoint)}
-                        />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleOpenDialog(endpoint)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
+                </TableHeader>
+                <TableBody>
+                  {endpoints.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-24 text-center">
+                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                          <Settings className="h-8 w-8" />
+                          <p>Nenhum endpoint configurado</p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenDialog()}
+                          >
+                            <Plus className="h-4 w-4" />
+                            Configurar primeiro endpoint
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    endpoints.map((endpoint) => (
+                      <TableRow key={endpoint.id}>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {moduleLabels[endpoint.module]}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <code className="text-sm bg-muted px-2 py-1 rounded">
+                            {endpoint.endpoint}
+                          </code>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={methodColors[endpoint.method] || ''}
+                          >
+                            {endpoint.method}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {endpoint.description || '—'}
+                        </TableCell>
+                        <TableCell>
+                          <Switch
+                            checked={endpoint.active}
+                            onCheckedChange={() => handleToggleActive(endpoint)}
+                            disabled={toggleActive.isPending}
+                          />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleOpenDialog(endpoint)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </div>
     </DashboardLayout>
   );
 }
-

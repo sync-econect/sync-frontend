@@ -4,4 +4,5 @@ export * from './raw-data';
 export * from './remittances';
 export * from './audit';
 export * from './validations';
+export * from './endpoint-configs';
 
