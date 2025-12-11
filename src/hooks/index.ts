@@ -4,5 +4,6 @@ export * from './use-raw-data';
 export * from './use-remittances';
 export * from './use-audit';
 export * from './use-validations';
+export * from './use-endpoint-configs';
 export * from './use-window-size';
 
