@@ -1,4 +1,40 @@
-// Tipos principais do sistema e-Sfinge
+export type UserRole = 'ADMIN' | 'MANAGER' | 'OPERATOR' | 'VIEWER';
+
+export interface AuthUser {
+  id: number;
+  email: string;
+  name: string;
+  role: UserRole;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+  user: AuthUser;
+}
+
+export interface RefreshTokenRequest {
+  refreshToken: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface UserSession {
+  id: number;
+  ip: string | null;
+  userAgent: string | null;
+  createdAt: string;
+  lastActivity: string;
+}
 
 export type Environment = 'PRODUCAO' | 'HOMOLOGACAO';
 
@@ -143,7 +179,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'ADMIN' | 'OPERATOR' | 'VIEWER';
+  role: UserRole;
   avatar?: string;
 }
 
@@ -155,4 +191,3 @@ export interface RemittanceStats {
   lastProtocol?: string;
   lastProtocolDate?: string;
 }
-
