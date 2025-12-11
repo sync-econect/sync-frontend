@@ -98,9 +98,7 @@ export function Sidebar() {
           {/* Header */}
           <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4 lg:px-6">
             <Link href="/" className="flex items-center gap-3">
-              <div className="p-1.5 rounded-lg bg-primary/10">
-                <Logo size={32} />
-              </div>
+              <Logo size={42} />
               <div className="flex flex-col">
                 <span className="text-sm font-bold text-sidebar-foreground">
                   e-Sfinge Sync
