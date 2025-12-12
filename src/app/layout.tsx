@@ -13,7 +13,6 @@ export const metadata: Metadata = {
   title: 'Sync',
   description:
     'Sistema de sincronização de dados entre o e-Sfinge/TCE-MS e o sistema de gestão de contas a pagar',
-  generator: 'v0.app',
   icons: {
     icon: [
       {
