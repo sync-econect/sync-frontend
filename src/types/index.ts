@@ -12,6 +12,12 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface RegisterRequest {
+  name: string;
+  email: string;
+  password: string;
+}
+
 export interface LoginResponse {
   accessToken: string;
   refreshToken: string;
@@ -71,7 +77,15 @@ export type ModuleType =
   | 'EMPENHO'
   | 'LIQUIDACAO'
   | 'PAGAMENTO'
-  | 'EXECUCAO_ORCAMENTARIA';
+  | 'EXECUCAO_ORCAMENTARIA'
+  | 'CONVENIO'
+  | 'LICITACAO'
+  | 'PPA'
+  | 'LDO'
+  | 'LOA'
+  | 'ALTERACAO_ORCAMENTARIA';
+
+export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'transmit';
 
 export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'SEND';
 
@@ -180,7 +194,59 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
-  avatar?: string;
+  active: boolean;
+  lastLogin?: string;
+  lastActivity?: string;
+  failedLoginAttempts?: number;
+  lockedUntil?: string;
+  createdAt: string;
+  updatedAt: string;
+  permissions?: UserPermission[];
+}
+
+export interface UserPermission {
+  id: string;
+  userId: string;
+  unitId?: string | null;
+  module?: ModuleType | null;
+  canView: boolean;
+  canCreate: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+  canTransmit: boolean;
+  createdAt: string;
+  updatedAt: string;
+  user?: {
+    id: number;
+    name: string;
+    email: string;
+  };
+  unit?: {
+    id: number;
+    code: string;
+    name: string;
+  } | null;
+}
+
+export interface CreateUserPermissionRequest {
+  userId: number;
+  unitId?: number | null;
+  module?: ModuleType | null;
+  canView?: boolean;
+  canCreate?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
+  canTransmit?: boolean;
+}
+
+export interface UpdateUserPermissionRequest {
+  unitId?: number | null;
+  module?: ModuleType | null;
+  canView?: boolean;
+  canCreate?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
+  canTransmit?: boolean;
 }
 
 // Stats types

@@ -4,6 +4,7 @@ import type {
   LoginResponse,
   RefreshTokenRequest,
   ChangePasswordRequest,
+  RegisterRequest,
   AuthUser,
   UserSession,
 } from '@/types';
@@ -51,6 +52,21 @@ export function clearStoredAuth(): void {
 
 export async function login(data: LoginRequest): Promise<LoginResponse> {
   const response = await api.post<LoginResponse>('/auth/login', data);
+
+  const auth: StoredAuth = {
+    accessToken: response.data.accessToken,
+    refreshToken: response.data.refreshToken,
+    expiresAt: Date.now() + response.data.expiresIn * 1000,
+    user: response.data.user,
+  };
+
+  setStoredAuth(auth);
+
+  return response.data;
+}
+
+export async function register(data: RegisterRequest): Promise<LoginResponse> {
+  const response = await api.post<LoginResponse>('/auth/register', data);
 
   const auth: StoredAuth = {
     accessToken: response.data.accessToken,
