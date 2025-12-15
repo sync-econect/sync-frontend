@@ -1156,7 +1156,7 @@ export default function UsuariosPage() {
                     }
                   />
                   <Label htmlFor="canTransmit" className="text-sm">
-                    Transmitir para TCE
+                    Transmitir para TCE/MS
                   </Label>
                 </div>
               </div>

@@ -20,7 +20,11 @@ export function proxy(request: NextRequest) {
   }
 
   // Redireciona usuários autenticados que tentam acessar login ou register
-  if (isPublicRoute && isAuthenticated && (pathname === '/login' || pathname === '/register')) {
+  if (
+    isPublicRoute &&
+    isAuthenticated &&
+    (pathname === '/login' || pathname === '/register')
+  ) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 

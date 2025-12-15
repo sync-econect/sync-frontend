@@ -150,8 +150,10 @@ export interface Remittance {
   payload: Record<string, unknown>;
   protocol?: string;
   errorMsg?: string;
+  cancelReason?: string;
   createdAt: string;
   sentAt?: string;
+  cancelledAt?: string;
 }
 
 export interface RemittanceLog {
@@ -179,13 +181,41 @@ export interface AuditLog {
   createdAt: string;
 }
 
+// Tipos de campo para o schema do endpoint
+export type FieldType =
+  | 'STRING'
+  | 'NUMBER'
+  | 'BOOLEAN'
+  | 'DATE'
+  | 'DATETIME'
+  | 'ARRAY'
+  | 'OBJECT';
+
+// Definição de um campo no schema
+export interface FieldSchemaItem {
+  name: string;
+  type: FieldType;
+  required?: boolean;
+  description?: string;
+  path?: string; // Para campos aninhados: "root.child.field"
+  children?: FieldSchemaItem[]; // Campos filhos para OBJECT ou ARRAY
+  defaultValue?: string;
+}
+
+// Schema completo de campos do endpoint
+export interface FieldSchema {
+  fields: FieldSchemaItem[];
+}
+
 export interface EndpointConfig {
   id: string;
   module: ModuleType;
   endpoint: string;
   method: string;
+  ambiente: Environment;
   active: boolean;
   description?: string;
+  fieldSchema?: FieldSchema;
   createdAt: string;
 }
 

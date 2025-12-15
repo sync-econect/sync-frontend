@@ -14,6 +14,8 @@ import {
   ChevronDown,
   X,
   Users,
+  FileSignature,
+  ShoppingCart,
   type LucideIcon,
 } from 'lucide-react';
 import { Logo } from './logo';
@@ -34,6 +36,8 @@ interface MenuItem {
 const menuItems: MenuItem[] = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
   { icon: Building2, label: 'Unidades Gestoras', href: '/unidades' },
+  { icon: FileSignature, label: 'Contratos', href: '/contratos' },
+  { icon: ShoppingCart, label: 'Compras Diretas', href: '/compras-diretas' },
   { icon: ShieldCheck, label: 'Regras de Validação', href: '/regras' },
   { icon: Database, label: 'Dados Recebidos', href: '/dados' },
   { icon: Package, label: 'Remessas', href: '/remessas' },

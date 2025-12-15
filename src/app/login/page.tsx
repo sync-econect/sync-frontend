@@ -99,9 +99,9 @@ export default function LoginPage() {
             <CardTitle className="text-2xl font-bold tracking-tight">
               Acessar Painel e-Sfinge
             </CardTitle>
-            <CardDescription className="text-muted-foreground">
+            {/* <CardDescription className="text-muted-foreground">
               Sistema de integração com TCE-MS
-            </CardDescription>
+            </CardDescription> */}
           </div>
         </CardHeader>
 
@@ -184,7 +184,7 @@ export default function LoginPage() {
               Não tem uma conta? Cadastre-se
             </Link>
 
-            <div className="text-xs text-center text-muted-foreground">
+            {/* <div className="text-xs text-center text-muted-foreground">
               <p className="font-medium">Usuários de teste (seed):</p>
               <div className="mt-1 space-y-0.5">
                 <p>
@@ -196,7 +196,7 @@ export default function LoginPage() {
                   operador@econect.ms.gov.br / Operador@123
                 </p>
               </div>
-            </div>
+            </div> */}
           </div>
         </CardContent>
       </Card>

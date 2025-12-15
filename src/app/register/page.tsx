@@ -96,10 +96,9 @@ export default function RegisterPage() {
         password: data.password,
       });
       setSuccess(true);
-      // Redireciona para a home após 1 segundo
       setTimeout(() => {
         router.push('/');
-      }, 1000);
+      }, 2000); // 2s
     } catch (err) {
       if (err instanceof AxiosError) {
         const message =
@@ -278,4 +277,3 @@ export default function RegisterPage() {
     </div>
   );
 }
-

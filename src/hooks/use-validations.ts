@@ -37,7 +37,8 @@ export function useValidateRawData() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (rawDataId: number) => validationsService.validateRawData(rawDataId),
+    mutationFn: (rawDataId: number) =>
+      validationsService.validateRawData(rawDataId),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: RAW_DATA_QUERY_KEY });
@@ -47,7 +48,9 @@ export function useValidateRawData() {
           `Validação encontrou ${data.summary.impeditivas} erro(s) impeditivo(s) e ${data.summary.alertas} alerta(s)`
         );
       } else if (data.summary.alertas > 0) {
-        toast.warning(`Validação concluída com ${data.summary.alertas} alerta(s)`);
+        toast.warning(
+          `Validação concluída com ${data.summary.alertas} alerta(s)`
+        );
       } else {
         toast.success('Validação concluída sem erros!');
       }
@@ -62,7 +65,8 @@ export function useRevalidateRawData() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (rawDataId: number) => validationsService.revalidateRawData(rawDataId),
+    mutationFn: (rawDataId: number) =>
+      validationsService.revalidateRawData(rawDataId),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: RAW_DATA_QUERY_KEY });
@@ -72,7 +76,9 @@ export function useRevalidateRawData() {
           `Revalidação encontrou ${data.summary.impeditivas} erro(s) impeditivo(s) e ${data.summary.alertas} alerta(s)`
         );
       } else if (data.summary.alertas > 0) {
-        toast.warning(`Revalidação concluída com ${data.summary.alertas} alerta(s)`);
+        toast.warning(
+          `Revalidação concluída com ${data.summary.alertas} alerta(s)`
+        );
       } else {
         toast.success('Revalidação concluída sem erros!');
       }
@@ -87,7 +93,8 @@ export function useClearValidations() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (rawDataId: number) => validationsService.clearValidations(rawDataId),
+    mutationFn: (rawDataId: number) =>
+      validationsService.clearValidations(rawDataId),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEY });
       toast.success(`${data.count} validação(ões) removida(s)`);
@@ -97,4 +104,3 @@ export function useClearValidations() {
     },
   });
 }
-

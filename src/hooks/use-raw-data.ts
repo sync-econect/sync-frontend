@@ -38,7 +38,8 @@ export function useCreateRawData() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (payload: CreateRawDataPayload) => rawDataService.create(payload),
+    mutationFn: (payload: CreateRawDataPayload) =>
+      rawDataService.create(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEY });
       toast.success('Dados criados com sucesso!');
@@ -53,8 +54,13 @@ export function useUpdateRawData() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, payload }: { id: number; payload: UpdateRawDataPayload }) =>
-      rawDataService.update(id, payload),
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: number;
+      payload: UpdateRawDataPayload;
+    }) => rawDataService.update(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEY });
       toast.success('Dados atualizados com sucesso!');
@@ -79,4 +85,3 @@ export function useDeleteRawData() {
     },
   });
 }
-

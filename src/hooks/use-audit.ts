@@ -19,4 +19,3 @@ export function useAuditLog(id: number) {
     enabled: !!id,
   });
 }
-
