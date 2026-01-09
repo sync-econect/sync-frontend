@@ -53,7 +53,12 @@ export const auditService = {
     if (filters?.page) params.append('page', String(filters.page));
     if (filters?.limit) params.append('limit', String(filters.limit));
 
-    const { data } = await api.get<{ data: AuditLogResponse[]; total: number; page: number; limit: number }>('/audit', { params });
+    const { data } = await api.get<{
+      data: AuditLogResponse[];
+      total: number;
+      page: number;
+      limit: number;
+    }>('/audit', { params });
     return {
       ...data,
       data: data.data.map(mapAuditLogResponse),
@@ -65,4 +70,3 @@ export const auditService = {
     return mapAuditLogResponse(data);
   },
 };
-

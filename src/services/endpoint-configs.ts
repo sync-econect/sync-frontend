@@ -1,5 +1,10 @@
 import { api } from '@/lib/axios';
-import type { EndpointConfig, ModuleType } from '@/types';
+import type {
+  EndpointConfig,
+  ModuleType,
+  FieldSchema,
+  Environment,
+} from '@/types';
 
 // Tipos para o backend (IDs numéricos)
 export interface EndpointConfigResponse {
@@ -8,7 +13,9 @@ export interface EndpointConfigResponse {
   endpoint: string;
   method: string;
   description?: string;
+  ambiente: Environment;
   active: boolean;
+  fieldSchema?: FieldSchema;
   createdAt: string;
 }
 
@@ -17,7 +24,9 @@ export interface CreateEndpointConfigPayload {
   endpoint: string;
   method?: string;
   description?: string;
+  ambiente?: Environment;
   active?: boolean;
+  fieldSchema?: FieldSchema;
 }
 
 export interface UpdateEndpointConfigPayload
@@ -33,7 +42,9 @@ const mapEndpointConfigResponse = (
 
 export const endpointConfigsService = {
   async getAll(): Promise<EndpointConfig[]> {
-    const { data } = await api.get<EndpointConfigResponse[]>('/endpoint-configs');
+    const { data } = await api.get<EndpointConfigResponse[]>(
+      '/endpoint-configs'
+    );
     return data.map(mapEndpointConfigResponse);
   },
 
@@ -67,4 +78,3 @@ export const endpointConfigsService = {
     await api.delete(`/endpoint-configs/${id}`);
   },
 };
-

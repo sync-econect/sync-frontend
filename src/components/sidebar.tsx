@@ -13,15 +13,31 @@ import {
   Settings,
   ChevronDown,
   X,
+  Users,
+  FileSignature,
+  ShoppingCart,
+  type LucideIcon,
 } from 'lucide-react';
 import { Logo } from './logo';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSidebar } from '@/contexts/sidebar-context';
+import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
+import type { UserRole } from '@/types';
 
-const menuItems = [
+interface MenuItem {
+  icon: LucideIcon;
+  label: string;
+  href: string;
+  submenu?: { label: string; href: string }[];
+  roles?: UserRole[]; // Se não definido, todos os roles podem ver
+}
+
+const menuItems: MenuItem[] = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
   { icon: Building2, label: 'Unidades Gestoras', href: '/unidades' },
+  { icon: FileSignature, label: 'Contratos', href: '/contratos' },
+  { icon: ShoppingCart, label: 'Compras Diretas', href: '/compras-diretas' },
   { icon: ShieldCheck, label: 'Regras de Validação', href: '/regras' },
   { icon: Database, label: 'Dados Recebidos', href: '/dados' },
   { icon: Package, label: 'Remessas', href: '/remessas' },
@@ -34,6 +50,12 @@ const menuItems = [
       { label: 'Auditoria', href: '/logs?tab=auditoria' },
     ],
   },
+  {
+    icon: Users,
+    label: 'Usuários',
+    href: '/usuarios',
+    roles: ['ADMIN', 'MANAGER'], // Apenas ADMIN e MANAGER podem ver
+  },
   { icon: Settings, label: 'Endpoints', href: '/endpoints' },
 ];
 
@@ -41,6 +63,19 @@ export function Sidebar() {
   const pathname = usePathname();
   const [expandedItems, setExpandedItems] = useState<string[]>(['/logs']);
   const { isOpen, close } = useSidebar();
+  const { user } = useAuth();
+
+  // Filtra os itens de menu baseado no role do usuário
+  const filteredMenuItems = useMemo(() => {
+    return menuItems.filter((item) => {
+      // Se o item não tem restrição de roles, mostra para todos
+      if (!item.roles) return true;
+      // Se o usuário não está logado, não mostra itens restritos
+      if (!user) return false;
+      // Verifica se o role do usuário está na lista permitida
+      return item.roles.includes(user.role);
+    });
+  }, [user]);
 
   const toggleExpand = (href: string) => {
     setExpandedItems((prev) =>
@@ -122,7 +157,7 @@ export function Sidebar() {
 
           {/* Navigation */}
           <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
-            {menuItems.map((item) => {
+            {filteredMenuItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.href);
               const hasSubmenu = item.submenu && item.submenu.length > 0;

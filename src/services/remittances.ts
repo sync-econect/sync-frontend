@@ -1,5 +1,11 @@
 import { api } from '@/lib/axios';
-import type { Remittance, RemittanceLog, RemittanceStatus, ModuleType, RemittanceStats } from '@/types';
+import type {
+  Remittance,
+  RemittanceLog,
+  RemittanceStatus,
+  ModuleType,
+  RemittanceStats,
+} from '@/types';
 import type { UnitResponse } from './units';
 
 // Tipos para o backend (IDs numéricos)
@@ -15,8 +21,10 @@ export interface RemittanceResponse {
   payload: Record<string, unknown>;
   protocol?: string;
   errorMsg?: string;
+  cancelReason?: string;
   createdAt: string;
   sentAt?: string;
+  cancelledAt?: string;
 }
 
 export interface RemittanceLogResponse {
@@ -34,6 +42,11 @@ export interface RemittanceLogResponse {
 
 export interface CreateRemittancePayload {
   rawDataId: number;
+}
+
+export interface CancelRemittancePayload {
+  id: number;
+  reason: string;
 }
 
 export interface RemittanceFilters {
@@ -61,6 +74,18 @@ export interface SendResult {
   remittance: RemittanceResponse;
 }
 
+export interface BatchSendResult {
+  total: number;
+  successful: number;
+  failed: number;
+  results: {
+    id: number;
+    success: boolean;
+    protocol?: string;
+    message: string;
+  }[];
+}
+
 // Mapeia resposta do backend para o tipo do frontend
 const mapRemittanceResponse = (remittance: RemittanceResponse): Remittance => ({
   ...remittance,
@@ -75,14 +100,18 @@ const mapRemittanceResponse = (remittance: RemittanceResponse): Remittance => ({
     : undefined,
 });
 
-const mapRemittanceLogResponse = (log: RemittanceLogResponse): RemittanceLog => ({
+const mapRemittanceLogResponse = (
+  log: RemittanceLogResponse
+): RemittanceLog => ({
   ...log,
   id: String(log.id),
   remittanceId: String(log.remittanceId),
 });
 
 export const remittancesService = {
-  async getAll(filters?: RemittanceFilters): Promise<PaginatedResponse<Remittance>> {
+  async getAll(
+    filters?: RemittanceFilters
+  ): Promise<PaginatedResponse<Remittance>> {
     const params = new URLSearchParams();
     if (filters?.status) params.append('status', filters.status);
     if (filters?.module) params.append('module', filters.module);
@@ -93,7 +122,10 @@ export const remittancesService = {
     if (filters?.page) params.append('page', String(filters.page));
     if (filters?.limit) params.append('limit', String(filters.limit));
 
-    const { data } = await api.get<PaginatedResponse<RemittanceResponse>>('/remittances', { params });
+    const { data } = await api.get<PaginatedResponse<RemittanceResponse>>(
+      '/remittances',
+      { params }
+    );
     return {
       ...data,
       data: data.data.map(mapRemittanceResponse),
@@ -111,12 +143,17 @@ export const remittancesService = {
   },
 
   async getLogs(id: number): Promise<RemittanceLog[]> {
-    const { data } = await api.get<RemittanceLogResponse[]>(`/remittances/${id}/logs`);
+    const { data } = await api.get<RemittanceLogResponse[]>(
+      `/remittances/${id}/logs`
+    );
     return data.map(mapRemittanceLogResponse);
   },
 
   async create(payload: CreateRemittancePayload): Promise<Remittance> {
-    const { data } = await api.post<RemittanceResponse>('/remittances', payload);
+    const { data } = await api.post<RemittanceResponse>(
+      '/remittances',
+      payload
+    );
     return mapRemittanceResponse(data);
   },
 
@@ -133,14 +170,26 @@ export const remittancesService = {
     };
   },
 
-  async cancel(id: number): Promise<Remittance> {
-    const { data } = await api.post<RemittanceResponse>(`/remittances/${id}/cancel`);
+  async cancel(id: number, reason: string): Promise<Remittance> {
+    const { data } = await api.post<RemittanceResponse>(
+      `/remittances/${id}/cancel`,
+      { reason }
+    );
     return mapRemittanceResponse(data);
   },
 
   async retry(id: number): Promise<Remittance> {
-    const { data } = await api.post<RemittanceResponse>(`/remittances/${id}/retry`);
+    const { data } = await api.post<RemittanceResponse>(
+      `/remittances/${id}/retry`
+    );
     return mapRemittanceResponse(data);
   },
-};
 
+  async sendBatch(ids: number[]): Promise<BatchSendResult> {
+    const { data } = await api.post<BatchSendResult>(
+      '/remittances/send-batch',
+      { ids }
+    );
+    return data;
+  },
+};

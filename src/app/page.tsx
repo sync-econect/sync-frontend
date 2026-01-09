@@ -395,7 +395,7 @@ export default function DashboardPage() {
                                     onClick={() => handleSend(remittance)}
                                   >
                                     <Send className="h-4 w-4" />
-                                    Enviar para TCE
+                                    Enviar para TCE/MS
                                   </DropdownMenuItem>
                                 )}
                                 {(remittance.status === 'ERROR' ||
@@ -498,7 +498,7 @@ export default function DashboardPage() {
                                   }}
                                 >
                                   <Send className="h-4 w-4" />
-                                  Enviar para TCE
+                                  Enviar para TCE/MS
                                 </DropdownMenuItem>
                               )}
                               {(remittance.status === 'ERROR' ||
@@ -731,7 +731,9 @@ export default function DashboardPage() {
                       ) : (
                         <Send className="h-4 w-4" />
                       )}
-                      <span className="hidden sm:inline">Enviar para TCE</span>
+                      <span className="hidden sm:inline">
+                        Enviar para TCE/MS
+                      </span>
                       <span className="sm:hidden">Enviar</span>
                     </Button>
                   )}

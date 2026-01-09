@@ -53,6 +53,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -79,6 +81,7 @@ import {
   useSendRemittance,
   useCancelRemittance,
   useRetryRemittance,
+  useSendRemittanceBatch,
 } from '@/hooks/use-remittances';
 import { useRawData } from '@/hooks/use-raw-data';
 import type { Remittance, RemittanceStatus, ModuleType } from '@/types';
@@ -141,12 +144,19 @@ export default function RemessasPage() {
   const cancelRemittance = useCancelRemittance();
   const retryRemittance = useRetryRemittance();
   const createRemittance = useCreateRemittance();
+  const sendBatch = useSendRemittanceBatch();
 
   const [selectedRemittance, setSelectedRemittance] =
     useState<Remittance | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedRawDataId, setSelectedRawDataId] = useState<string>('');
+
+  // Cancel dialog state
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [remittanceToCancel, setRemittanceToCancel] =
+    useState<Remittance | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
 
   const remittances = remittancesData?.data || [];
 
@@ -168,29 +178,123 @@ export default function RemessasPage() {
     retryRemittance.mutate(parseInt(remittance.id));
   };
 
-  const handleCancel = (remittance: Remittance) => {
-    cancelRemittance.mutate(parseInt(remittance.id));
+  const handleOpenCancelDialog = (remittance: Remittance) => {
+    setRemittanceToCancel(remittance);
+    setCancelReason('');
+    setIsCancelDialogOpen(true);
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!remittanceToCancel || !cancelReason.trim()) {
+      toast.error('Informe a justificativa para o cancelamento');
+      return;
+    }
+
+    if (cancelReason.trim().length < 10) {
+      toast.error('A justificativa deve ter no mínimo 10 caracteres');
+      return;
+    }
+
+    cancelRemittance.mutate(
+      {
+        id: parseInt(remittanceToCancel.id),
+        reason: cancelReason.trim(),
+      },
+      {
+        onSuccess: () => {
+          setIsCancelDialogOpen(false);
+          setRemittanceToCancel(null);
+          setCancelReason('');
+        },
+      }
+    );
+  };
+
+  // Filtra remessas selecionadas por status
+  const selectedReadyItems = selectedItems.filter((id) => {
+    const remittance = remittances.find((r) => r.id === id);
+    return remittance?.status === 'READY';
+  });
+
+  const selectedCancellableItems = selectedItems.filter((id) => {
+    const remittance = remittances.find((r) => r.id === id);
+    return ['PENDING', 'READY'].includes(remittance?.status || '');
+  });
+
+  const selectedRetryableItems = selectedItems.filter((id) => {
+    const remittance = remittances.find((r) => r.id === id);
+    return remittance?.status === 'ERROR';
+  });
+
+  const handleBulkSend = () => {
+    if (selectedReadyItems.length === 0) {
+      toast.error('Nenhuma remessa selecionada está pronta para envio');
+      return;
+    }
+    sendBatch.mutate(
+      selectedReadyItems.map((id) => parseInt(id)),
+      {
+        onSuccess: () => {
+          setSelectedItems([]);
+        },
+      }
+    );
   };
 
   const handleBulkResend = () => {
-    if (selectedItems.length === 0) {
-      toast.error('Selecione pelo menos uma remessa');
+    if (selectedRetryableItems.length === 0) {
+      toast.error('Nenhuma remessa selecionada pode ser reenviada');
       return;
     }
-    selectedItems.forEach((id) => {
+    selectedRetryableItems.forEach((id) => {
       retryRemittance.mutate(parseInt(id));
     });
     setSelectedItems([]);
   };
 
   const handleBulkCancel = () => {
-    if (selectedItems.length === 0) {
-      toast.error('Selecione pelo menos uma remessa');
+    if (selectedCancellableItems.length === 0) {
+      toast.error('Nenhuma remessa selecionada pode ser cancelada');
       return;
     }
-    selectedItems.forEach((id) => {
-      cancelRemittance.mutate(parseInt(id));
+
+    // Para cancelamento em lote, usa a primeira remessa selecionada como referência
+    const firstRemittance = remittances.find(
+      (r) => r.id === selectedCancellableItems[0]
+    );
+    if (firstRemittance) {
+      setRemittanceToCancel({
+        ...firstRemittance,
+        // Marca que é um cancelamento em lote através de um ID especial
+        id: selectedCancellableItems.join(','),
+      });
+      setCancelReason('');
+      setIsCancelDialogOpen(true);
+    }
+  };
+
+  const handleConfirmBulkCancel = async () => {
+    if (!remittanceToCancel || !cancelReason.trim()) {
+      toast.error('Informe a justificativa para o cancelamento');
+      return;
+    }
+
+    if (cancelReason.trim().length < 10) {
+      toast.error('A justificativa deve ter no mínimo 10 caracteres');
+      return;
+    }
+
+    const ids = remittanceToCancel.id.split(',');
+    ids.forEach((id) => {
+      cancelRemittance.mutate({
+        id: parseInt(id),
+        reason: cancelReason.trim(),
+      });
     });
+
+    setIsCancelDialogOpen(false);
+    setRemittanceToCancel(null);
+    setCancelReason('');
     setSelectedItems([]);
   };
 
@@ -303,27 +407,68 @@ export default function RemessasPage() {
           <Card className="border-primary/50 bg-primary/5">
             <CardContent className="py-3 px-4">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <span className="text-sm font-medium">
-                  {selectedItems.length} item(s) selecionado(s)
-                </span>
-                <div className="flex gap-2 w-full sm:w-auto">
+                <div className="text-sm">
+                  <span className="font-medium">
+                    {selectedItems.length} item(s) selecionado(s)
+                  </span>
+                  {selectedReadyItems.length > 0 && (
+                    <span className="ml-2 text-muted-foreground">
+                      ({selectedReadyItems.length} pronta(s) para envio)
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-2 w-full sm:w-auto flex-wrap">
+                  {selectedReadyItems.length > 0 && (
+                    <Button
+                      size="sm"
+                      onClick={handleBulkSend}
+                      disabled={sendBatch.isPending}
+                      className="flex-1 sm:flex-none"
+                    >
+                      {sendBatch.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
+                      <span className="ml-1">
+                        Transmitir ({selectedReadyItems.length})
+                      </span>
+                    </Button>
+                  )}
+                  {selectedRetryableItems.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleBulkResend}
+                      className="flex-1 sm:flex-none"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                      <span className="ml-1">
+                        Reenviar ({selectedRetryableItems.length})
+                      </span>
+                    </Button>
+                  )}
+                  {selectedCancellableItems.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleBulkCancel}
+                      className="text-destructive flex-1 sm:flex-none"
+                    >
+                      <XCircle className="h-4 w-4" />
+                      <span className="ml-1">
+                        Cancelar ({selectedCancellableItems.length})
+                      </span>
+                    </Button>
+                  )}
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
-                    onClick={handleBulkResend}
+                    onClick={() => setSelectedItems([])}
                     className="flex-1 sm:flex-none"
                   >
-                    <RefreshCw className="h-4 w-4" />
-                    <span className="hidden sm:inline ml-1">Reenviar</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleBulkCancel}
-                    className="text-destructive flex-1 sm:flex-none"
-                  >
-                    <XCircle className="h-4 w-4" />
-                    <span className="hidden sm:inline ml-1">Cancelar</span>
+                    <X className="h-4 w-4" />
+                    <span className="ml-1">Limpar</span>
                   </Button>
                 </div>
               </div>
@@ -461,7 +606,7 @@ export default function RemessasPage() {
                                     onClick={() => handleSend(remittance)}
                                   >
                                     <Send className="h-4 w-4" />
-                                    Enviar para TCE
+                                    Enviar para TCE/MS
                                   </DropdownMenuItem>
                                 )}
                                 {(remittance.status === 'ERROR' ||
@@ -477,7 +622,9 @@ export default function RemessasPage() {
                                   remittance.status
                                 ) && (
                                   <DropdownMenuItem
-                                    onClick={() => handleCancel(remittance)}
+                                    onClick={() =>
+                                      handleOpenCancelDialog(remittance)
+                                    }
                                     className="text-destructive"
                                   >
                                     <XCircle className="h-4 w-4" />
@@ -572,7 +719,7 @@ export default function RemessasPage() {
                                   }}
                                 >
                                   <Send className="h-4 w-4" />
-                                  Enviar para TCE
+                                  Enviar para TCE/MS
                                 </DropdownMenuItem>
                               )}
                               {(remittance.status === 'ERROR' ||
@@ -593,7 +740,7 @@ export default function RemessasPage() {
                                 <DropdownMenuItem
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleCancel(remittance);
+                                    handleOpenCancelDialog(remittance);
                                   }}
                                   className="text-destructive"
                                 >
@@ -613,6 +760,70 @@ export default function RemessasPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Cancel Dialog */}
+      <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Cancelar Remessa</DialogTitle>
+            <DialogDescription>
+              {remittanceToCancel?.id.includes(',')
+                ? `Informe a justificativa para cancelar ${
+                    remittanceToCancel.id.split(',').length
+                  } remessa(s)`
+                : `Informe a justificativa para cancelar a remessa #${remittanceToCancel?.id}`}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="cancelReason">Justificativa *</Label>
+              <Textarea
+                id="cancelReason"
+                placeholder="Descreva o motivo do cancelamento (mínimo 10 caracteres)"
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                rows={4}
+                className="resize-none"
+              />
+              <p className="text-xs text-muted-foreground">
+                {cancelReason.length}/500 caracteres
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsCancelDialogOpen(false);
+                setRemittanceToCancel(null);
+                setCancelReason('');
+              }}
+              className="w-full sm:w-auto"
+            >
+              Voltar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={
+                remittanceToCancel?.id.includes(',')
+                  ? handleConfirmBulkCancel
+                  : handleConfirmCancel
+              }
+              disabled={
+                cancelRemittance.isPending || cancelReason.trim().length < 10
+              }
+              className="w-full sm:w-auto"
+            >
+              {cancelRemittance.isPending && (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              )}
+              Confirmar Cancelamento
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Create Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -740,6 +951,27 @@ export default function RemessasPage() {
                     <p className="text-sm mt-1">
                       {selectedRemittance.errorMsg}
                     </p>
+                  </div>
+                )}
+
+                {selectedRemittance?.cancelReason && (
+                  <div className="p-3 sm:p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                    <p className="text-sm font-medium text-amber-600">
+                      Justificativa do Cancelamento
+                    </p>
+                    <p className="text-sm mt-1">
+                      {selectedRemittance.cancelReason}
+                    </p>
+                    {selectedRemittance.cancelledAt && (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Cancelado em{' '}
+                        {format(
+                          new Date(selectedRemittance.cancelledAt),
+                          "dd/MM/yyyy 'às' HH:mm",
+                          { locale: ptBR }
+                        )}
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -895,7 +1127,7 @@ export default function RemessasPage() {
                 ) : (
                   <Send className="h-4 w-4" />
                 )}
-                <span className="hidden sm:inline">Enviar para TCE</span>
+                <span className="hidden sm:inline">Enviar para TCE/MS</span>
                 <span className="sm:hidden">Enviar</span>
               </Button>
             )}

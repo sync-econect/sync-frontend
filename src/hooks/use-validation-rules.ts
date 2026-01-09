@@ -46,8 +46,13 @@ export function useUpdateValidationRule() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, payload }: { id: number; payload: UpdateValidationRulePayload }) =>
-      validationRulesService.update(id, payload),
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: number;
+      payload: UpdateValidationRulePayload;
+    }) => validationRulesService.update(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEY });
       toast.success('Regra atualizada com sucesso!');
@@ -88,4 +93,3 @@ export function useToggleValidationRuleActive() {
     },
   });
 }
-

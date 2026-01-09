@@ -1,5 +1,10 @@
 import { api } from '@/lib/axios';
-import type { ValidationRule, ModuleType, ValidationOperator, ValidationLevel } from '@/types';
+import type {
+  ValidationRule,
+  ModuleType,
+  ValidationOperator,
+  ValidationLevel,
+} from '@/types';
 
 // Tipos para o backend (IDs numéricos)
 export interface ValidationRuleResponse {
@@ -26,14 +31,17 @@ export interface CreateValidationRulePayload {
   active?: boolean;
 }
 
-export interface UpdateValidationRulePayload extends Partial<CreateValidationRulePayload> {}
+export interface UpdateValidationRulePayload
+  extends Partial<CreateValidationRulePayload> {}
 
 export interface ValidationRuleFilters {
   module?: string;
 }
 
 // Mapeia resposta do backend para o tipo do frontend
-const mapValidationRuleResponse = (rule: ValidationRuleResponse): ValidationRule => ({
+const mapValidationRuleResponse = (
+  rule: ValidationRuleResponse
+): ValidationRule => ({
   ...rule,
   id: String(rule.id),
 });
@@ -42,23 +50,37 @@ export const validationRulesService = {
   async getAll(filters?: ValidationRuleFilters): Promise<ValidationRule[]> {
     const params = new URLSearchParams();
     if (filters?.module) params.append('module', filters.module);
-    
-    const { data } = await api.get<ValidationRuleResponse[]>('/validation-rules', { params });
+
+    const { data } = await api.get<ValidationRuleResponse[]>(
+      '/validation-rules',
+      { params }
+    );
     return data.map(mapValidationRuleResponse);
   },
 
   async getById(id: number): Promise<ValidationRule> {
-    const { data } = await api.get<ValidationRuleResponse>(`/validation-rules/${id}`);
+    const { data } = await api.get<ValidationRuleResponse>(
+      `/validation-rules/${id}`
+    );
     return mapValidationRuleResponse(data);
   },
 
   async create(payload: CreateValidationRulePayload): Promise<ValidationRule> {
-    const { data } = await api.post<ValidationRuleResponse>('/validation-rules', payload);
+    const { data } = await api.post<ValidationRuleResponse>(
+      '/validation-rules',
+      payload
+    );
     return mapValidationRuleResponse(data);
   },
 
-  async update(id: number, payload: UpdateValidationRulePayload): Promise<ValidationRule> {
-    const { data } = await api.patch<ValidationRuleResponse>(`/validation-rules/${id}`, payload);
+  async update(
+    id: number,
+    payload: UpdateValidationRulePayload
+  ): Promise<ValidationRule> {
+    const { data } = await api.patch<ValidationRuleResponse>(
+      `/validation-rules/${id}`,
+      payload
+    );
     return mapValidationRuleResponse(data);
   },
 
@@ -66,4 +88,3 @@ export const validationRulesService = {
     await api.delete(`/validation-rules/${id}`);
   },
 };
-

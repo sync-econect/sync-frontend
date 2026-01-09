@@ -85,11 +85,12 @@ export function useToggleEndpointConfigActive() {
       endpointConfigsService.update(id, { active }),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEY });
-      toast.success(variables.active ? 'Endpoint ativado' : 'Endpoint desativado');
+      toast.success(
+        variables.active ? 'Endpoint ativado' : 'Endpoint desativado'
+      );
     },
     onError: (error: Error) => {
       toast.error(`Erro ao alterar status: ${error.message}`);
     },
   });
 }
-

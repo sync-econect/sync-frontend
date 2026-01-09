@@ -12,6 +12,12 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface RegisterRequest {
+  name: string;
+  email: string;
+  password: string;
+}
+
 export interface LoginResponse {
   accessToken: string;
   refreshToken: string;
@@ -71,7 +77,15 @@ export type ModuleType =
   | 'EMPENHO'
   | 'LIQUIDACAO'
   | 'PAGAMENTO'
-  | 'EXECUCAO_ORCAMENTARIA';
+  | 'EXECUCAO_ORCAMENTARIA'
+  | 'CONVENIO'
+  | 'LICITACAO'
+  | 'PPA'
+  | 'LDO'
+  | 'LOA'
+  | 'ALTERACAO_ORCAMENTARIA';
+
+export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'transmit';
 
 export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'SEND';
 
@@ -136,8 +150,10 @@ export interface Remittance {
   payload: Record<string, unknown>;
   protocol?: string;
   errorMsg?: string;
+  cancelReason?: string;
   createdAt: string;
   sentAt?: string;
+  cancelledAt?: string;
 }
 
 export interface RemittanceLog {
@@ -165,13 +181,41 @@ export interface AuditLog {
   createdAt: string;
 }
 
+// Tipos de campo para o schema do endpoint
+export type FieldType =
+  | 'STRING'
+  | 'NUMBER'
+  | 'BOOLEAN'
+  | 'DATE'
+  | 'DATETIME'
+  | 'ARRAY'
+  | 'OBJECT';
+
+// Definição de um campo no schema
+export interface FieldSchemaItem {
+  name: string;
+  type: FieldType;
+  required?: boolean;
+  description?: string;
+  path?: string; // Para campos aninhados: "root.child.field"
+  children?: FieldSchemaItem[]; // Campos filhos para OBJECT ou ARRAY
+  defaultValue?: string;
+}
+
+// Schema completo de campos do endpoint
+export interface FieldSchema {
+  fields: FieldSchemaItem[];
+}
+
 export interface EndpointConfig {
   id: string;
   module: ModuleType;
   endpoint: string;
   method: string;
+  ambiente: Environment;
   active: boolean;
   description?: string;
+  fieldSchema?: FieldSchema;
   createdAt: string;
 }
 
@@ -180,7 +224,59 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
-  avatar?: string;
+  active: boolean;
+  lastLogin?: string;
+  lastActivity?: string;
+  failedLoginAttempts?: number;
+  lockedUntil?: string;
+  createdAt: string;
+  updatedAt: string;
+  permissions?: UserPermission[];
+}
+
+export interface UserPermission {
+  id: string;
+  userId: string;
+  unitId?: string | null;
+  module?: ModuleType | null;
+  canView: boolean;
+  canCreate: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+  canTransmit: boolean;
+  createdAt: string;
+  updatedAt: string;
+  user?: {
+    id: number;
+    name: string;
+    email: string;
+  };
+  unit?: {
+    id: number;
+    code: string;
+    name: string;
+  } | null;
+}
+
+export interface CreateUserPermissionRequest {
+  userId: number;
+  unitId?: number | null;
+  module?: ModuleType | null;
+  canView?: boolean;
+  canCreate?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
+  canTransmit?: boolean;
+}
+
+export interface UpdateUserPermissionRequest {
+  unitId?: number | null;
+  module?: ModuleType | null;
+  canView?: boolean;
+  canCreate?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
+  canTransmit?: boolean;
 }
 
 // Stats types

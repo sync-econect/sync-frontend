@@ -1,7 +1,11 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { unitsService, type CreateUnitPayload, type UpdateUnitPayload } from '@/services/units';
+import {
+  unitsService,
+  type CreateUnitPayload,
+  type UpdateUnitPayload,
+} from '@/services/units';
 import { toast } from 'sonner';
 
 const QUERY_KEY = ['units'];
@@ -75,11 +79,12 @@ export function useToggleUnitActive() {
       unitsService.update(id, { active }),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEY });
-      toast.success(variables.active ? 'Unidade ativada' : 'Unidade desativada');
+      toast.success(
+        variables.active ? 'Unidade ativada' : 'Unidade desativada'
+      );
     },
     onError: (error: Error) => {
       toast.error(`Erro ao alterar status: ${error.message}`);
     },
   });
 }
-

@@ -96,7 +96,9 @@ export const validationsService = {
     if (filters?.level) params.append('level', filters.level);
     if (filters?.code) params.append('code', filters.code);
 
-    const { data } = await api.get<ValidationResponse[]>('/validations', { params });
+    const { data } = await api.get<ValidationResponse[]>('/validations', {
+      params,
+    });
     return data.map(mapValidationResponse);
   },
 
@@ -105,4 +107,3 @@ export const validationsService = {
     return mapValidationResponse(data);
   },
 };
-

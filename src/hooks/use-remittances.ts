@@ -4,10 +4,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   remittancesService,
   type CreateRemittancePayload,
+  type CancelRemittancePayload,
   type RemittanceFilters,
 } from '@/services/remittances';
 import { toast } from 'sonner';
-import { AxiosError } from 'axios';
 
 const QUERY_KEY = ['remittances'];
 const STATS_QUERY_KEY = ['remittances', 'stats'];
@@ -83,14 +83,17 @@ export function useCancelRemittance() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: number) => remittancesService.cancel(id),
+    mutationFn: ({ id, reason }: CancelRemittancePayload) =>
+      remittancesService.cancel(id, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: STATS_QUERY_KEY });
       toast.warning('Remessa cancelada');
     },
-    onError: (error: Error) => {
-      toast.error(`Erro ao cancelar remessa: ${error.message}`);
+    onError: (error: any) => {
+      const message =
+        error.response?.data?.message || error.message || 'Erro desconhecido';
+      toast.error(`Erro ao cancelar remessa: ${message}`);
     },
   });
 }
@@ -107,6 +110,31 @@ export function useRetryRemittance() {
     },
     onError: (error: Error) => {
       toast.error(`Erro ao reenviar remessa: ${error.message}`);
+    },
+  });
+}
+
+export function useSendRemittanceBatch() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (ids: number[]) => remittancesService.sendBatch(ids),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: STATS_QUERY_KEY });
+
+      if (data.failed === 0) {
+        toast.success(`${data.successful} remessa(s) enviada(s) com sucesso!`);
+      } else if (data.successful === 0) {
+        toast.error(`Falha ao enviar ${data.failed} remessa(s)`);
+      } else {
+        toast.warning(
+          `${data.successful} enviada(s) com sucesso, ${data.failed} falha(s)`
+        );
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(`Erro ao enviar remessas em lote: ${error.message}`);
     },
   });
 }

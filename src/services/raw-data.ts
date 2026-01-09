@@ -63,7 +63,9 @@ export const rawDataService = {
   },
 
   async getByModule(module: string): Promise<RawData[]> {
-    const { data } = await api.get<RawDataResponse[]>(`/raw-data/module/${module}`);
+    const { data } = await api.get<RawDataResponse[]>(
+      `/raw-data/module/${module}`
+    );
     return data.map(mapRawDataResponse);
   },
 
@@ -73,7 +75,10 @@ export const rawDataService = {
   },
 
   async update(id: number, payload: UpdateRawDataPayload): Promise<RawData> {
-    const { data } = await api.patch<RawDataResponse>(`/raw-data/${id}`, payload);
+    const { data } = await api.patch<RawDataResponse>(
+      `/raw-data/${id}`,
+      payload
+    );
     return mapRawDataResponse(data);
   },
 
@@ -82,4 +87,3 @@ export const rawDataService = {
     return mapRawDataResponse(data);
   },
 };
-
